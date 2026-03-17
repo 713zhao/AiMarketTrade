@@ -24,6 +24,26 @@ from .nodes import (
     RiskAnalystNode,
     ConsensusNode,
     DecisionNode,
+    PortfolioRiskNode,
+    PortfolioOptimizationNode,
+    MacroScenarioNode,
+    MultiScenarioAnalysisNode,
+    RebalancingNode,
+    # Phase 5 additions
+    EfficientFrontierNode,
+    PerformanceAttributionNode,
+    TransactionCostNode,
+    BacktestingEngineNode,
+)
+from .broker_integration import (
+    # Phase 6 additions
+    BrokerConnectorNode,
+    TradeExecutorNode,
+    OrderMonitorNode,
+    PositionManagerNode,
+    AccountMonitorNode,
+    RiskControlNode,
+    ComplianceLoggerNode,
 )
 
 
@@ -39,7 +59,7 @@ def create_deerflow_graph(config: GraphConfig = None) -> StateGraph:
     """
     Create and configure the deerflow workflow graph.
 
-    Phase 2 Architecture with Parallel Execution:
+    Phase 5 Architecture with Production Deployment & Real-Time Integration:
 
     stock_data_node
          |
@@ -55,10 +75,40 @@ def create_deerflow_graph(config: GraphConfig = None) -> StateGraph:
      +--------+                  |
               |                  |
               v                  v
-            risk_analyst --> consensus_node --> decision_node --> END
+            risk_analyst --> consensus_node
+                                 |
+                                 v
+                         portfolio_risk_node
+                                 |
+                                 v
+                       portfolio_optimization_node
+                                 |
+                       +---------+---------+
+                       |                   |
+                       v                   v
+                macro_scenario_node  rebalancing_node
+                       |                   |
+                       +--------+----------+
+                                |
+                                v
+                    multi_scenario_analysis_node
+                                 |
+                  +--+--+--+--+--+
+                  |  |  |  |  |  |
+                  v  v  v  v  v  v
+            efficient_frontier  performance_attribution
+            transaction_cost    backtesting_engine
+                  |  |  |  |  |  |
+                  +--+--+--+--+--+
+                                |
+                                v
+                          decision_node --> END
 
-    All analyst nodes run in parallel after data fetch, then converge
-    to consensus which feeds into final decision.
+    Phases 1-4 pipeline with Phase 5 production deployment:
+    - Efficient frontier optimization with multiple portfolios
+    - Performance attribution analysis
+    - Transaction cost modeling and execution planning
+    - Historical strategy validation via backtesting
     """
     if config is None:
         config = {}
@@ -75,6 +125,24 @@ def create_deerflow_graph(config: GraphConfig = None) -> StateGraph:
     macro_analyst_node = MacroAnalystNode()
     risk_analyst_node = RiskAnalystNode()
     consensus_node = ConsensusNode()
+    portfolio_risk_node = PortfolioRiskNode()
+    portfolio_optimization_node = PortfolioOptimizationNode()
+    macro_scenario_node = MacroScenarioNode()
+    multi_scenario_analysis_node = MultiScenarioAnalysisNode()
+    rebalancing_node = RebalancingNode()
+    # Phase 5 nodes
+    efficient_frontier_node = EfficientFrontierNode()
+    performance_attribution_node = PerformanceAttributionNode()
+    transaction_cost_node = TransactionCostNode()
+    backtesting_engine_node = BacktestingEngineNode()
+    # Phase 6 nodes
+    broker_connector_node = BrokerConnectorNode()
+    trade_executor_node = TradeExecutorNode()
+    order_monitor_node = OrderMonitorNode()
+    position_manager_node = PositionManagerNode()
+    account_monitor_node = AccountMonitorNode()
+    risk_control_node = RiskControlNode()
+    compliance_logger_node = ComplianceLoggerNode()
     decision_node = DecisionNode()
 
     # Register nodes with the graph
@@ -86,6 +154,24 @@ def create_deerflow_graph(config: GraphConfig = None) -> StateGraph:
     workflow.add_node("macro_analyst", macro_analyst_node.execute)
     workflow.add_node("risk_analyst", risk_analyst_node.execute)
     workflow.add_node("consensus", consensus_node.execute)
+    workflow.add_node("portfolio_risk", portfolio_risk_node.execute)
+    workflow.add_node("portfolio_optimization", portfolio_optimization_node.execute)
+    workflow.add_node("macro_scenario", macro_scenario_node.execute)
+    workflow.add_node("multi_scenario_analysis", multi_scenario_analysis_node.execute)
+    workflow.add_node("rebalancing", rebalancing_node.execute)
+    # Phase 5 nodes
+    workflow.add_node("efficient_frontier", efficient_frontier_node.execute)
+    workflow.add_node("performance_attribution", performance_attribution_node.execute)
+    workflow.add_node("transaction_cost", transaction_cost_node.execute)
+    workflow.add_node("backtesting_engine", backtesting_engine_node.execute)
+    # Phase 6 nodes
+    workflow.add_node("broker_connector", broker_connector_node.execute)
+    workflow.add_node("trade_executor", trade_executor_node.execute)
+    workflow.add_node("order_monitor", order_monitor_node.execute)
+    workflow.add_node("position_manager", position_manager_node.execute)
+    workflow.add_node("account_monitor", account_monitor_node.execute)
+    workflow.add_node("risk_control", risk_control_node.execute)
+    workflow.add_node("compliance_logger", compliance_logger_node.execute)
     workflow.add_node("decision", decision_node.execute)
 
     # Parallel execution branch
@@ -114,8 +200,51 @@ def create_deerflow_graph(config: GraphConfig = None) -> StateGraph:
     ]:
         workflow.add_edge(analyst_node, "consensus")
 
-    # Consensus leads to decision
-    workflow.add_edge("consensus", "decision")
+    # Consensus leads to portfolio risk analysis (Phase 3)
+    workflow.add_edge("consensus", "portfolio_risk")
+    
+    # Portfolio risk leads to portfolio optimization (Phase 3)
+    workflow.add_edge("portfolio_risk", "portfolio_optimization")
+    
+    # Portfolio optimization branches to Phase 4 nodes
+    workflow.add_edge("portfolio_optimization", "macro_scenario")
+    workflow.add_edge("portfolio_optimization", "rebalancing")
+    
+    # Phase 4 nodes converge to multi-scenario analysis
+    workflow.add_edge("macro_scenario", "multi_scenario_analysis")
+    workflow.add_edge("rebalancing", "multi_scenario_analysis")
+    
+    # Phase 5: Multi-scenario analysis branches to all Phase 5 nodes
+    workflow.add_edge("multi_scenario_analysis", "efficient_frontier")
+    workflow.add_edge("multi_scenario_analysis", "performance_attribution")
+    workflow.add_edge("multi_scenario_analysis", "transaction_cost")
+    workflow.add_edge("multi_scenario_analysis", "backtesting_engine")
+    
+    # Phase 5 nodes converge to broker connector (Phase 6)
+    workflow.add_edge("efficient_frontier", "broker_connector")
+    workflow.add_edge("performance_attribution", "broker_connector")
+    workflow.add_edge("transaction_cost", "broker_connector")
+    workflow.add_edge("backtesting_engine", "broker_connector")
+    
+    # Phase 6: Broker connector establishes connections
+    # Then branches to account monitor and risk control for pre-trade validation
+    workflow.add_edge("broker_connector", "account_monitor")
+    workflow.add_edge("broker_connector", "risk_control")
+    
+    # Risk control and account monitor lead to trade executor
+    workflow.add_edge("risk_control", "trade_executor")
+    workflow.add_edge("account_monitor", "trade_executor")
+    
+    # Trade executor monitors order status
+    workflow.add_edge("trade_executor", "order_monitor")
+    
+    # Order monitor branches to position manager and compliance logger
+    workflow.add_edge("order_monitor", "position_manager")
+    workflow.add_edge("order_monitor", "compliance_logger")
+    
+    # Phase 6 nodes converge to final decision
+    workflow.add_edge("position_manager", "decision")
+    workflow.add_edge("compliance_logger", "decision")
     workflow.add_edge("decision", END)
 
     # Configure checkpointing
@@ -379,7 +508,7 @@ def create_mock_graph() -> StateGraph:
     Create a graph with mock data nodes for testing without API keys.
     
     Uses MockStockDataNode to generate synthetic data, but all
-    analyst nodes are real implementations.
+    analyst nodes are real implementations. Includes Phase 3-5 portfolio analysis.
     """
     workflow = StateGraph(DeerflowState)
 
@@ -392,6 +521,16 @@ def create_mock_graph() -> StateGraph:
     macro_analyst_node = MacroAnalystNode()
     risk_analyst_node = RiskAnalystNode()
     consensus_node = ConsensusNode()
+    portfolio_risk_node = PortfolioRiskNode()
+    portfolio_optimization_node = PortfolioOptimizationNode()
+    macro_scenario_node = MacroScenarioNode()
+    multi_scenario_analysis_node = MultiScenarioAnalysisNode()
+    rebalancing_node = RebalancingNode()
+    # Phase 5 nodes
+    efficient_frontier_node = EfficientFrontierNode()
+    performance_attribution_node = PerformanceAttributionNode()
+    transaction_cost_node = TransactionCostNode()
+    backtesting_engine_node = BacktestingEngineNode()
     decision_node = DecisionNode()
 
     workflow.add_node("stock_data", stock_data_node.execute)
@@ -402,9 +541,19 @@ def create_mock_graph() -> StateGraph:
     workflow.add_node("macro_analyst", macro_analyst_node.execute)
     workflow.add_node("risk_analyst", risk_analyst_node.execute)
     workflow.add_node("consensus", consensus_node.execute)
+    workflow.add_node("portfolio_risk", portfolio_risk_node.execute)
+    workflow.add_node("portfolio_optimization", portfolio_optimization_node.execute)
+    workflow.add_node("macro_scenario", macro_scenario_node.execute)
+    workflow.add_node("multi_scenario_analysis", multi_scenario_analysis_node.execute)
+    workflow.add_node("rebalancing", rebalancing_node.execute)
+    # Phase 5 nodes
+    workflow.add_node("efficient_frontier", efficient_frontier_node.execute)
+    workflow.add_node("performance_attribution", performance_attribution_node.execute)
+    workflow.add_node("transaction_cost", transaction_cost_node.execute)
+    workflow.add_node("backtesting_engine", backtesting_engine_node.execute)
     workflow.add_node("decision", decision_node.execute)
 
-    # Parallel structure: stock_data → all analysts → consensus → decision
+    # Parallel structure: stock_data → all analysts → consensus → portfolio_risk → portfolio_optimization → [macro_scenario, rebalancing] → multi_scenario_analysis → [phase5_nodes] → decision
     workflow.set_entry_point("stock_data")
 
     analyst_nodes = [
@@ -420,7 +569,22 @@ def create_mock_graph() -> StateGraph:
         workflow.add_edge("stock_data", node)
         workflow.add_edge(node, "consensus")
 
-    workflow.add_edge("consensus", "decision")
+    workflow.add_edge("consensus", "portfolio_risk")
+    workflow.add_edge("portfolio_risk", "portfolio_optimization")
+    workflow.add_edge("portfolio_optimization", "macro_scenario")
+    workflow.add_edge("portfolio_optimization", "rebalancing")
+    workflow.add_edge("macro_scenario", "multi_scenario_analysis")
+    workflow.add_edge("rebalancing", "multi_scenario_analysis")
+    # Phase 5 branches
+    workflow.add_edge("multi_scenario_analysis", "efficient_frontier")
+    workflow.add_edge("multi_scenario_analysis", "performance_attribution")
+    workflow.add_edge("multi_scenario_analysis", "transaction_cost")
+    workflow.add_edge("multi_scenario_analysis", "backtesting_engine")
+    # Phase 5 converges to decision
+    workflow.add_edge("efficient_frontier", "decision")
+    workflow.add_edge("performance_attribution", "decision")
+    workflow.add_edge("transaction_cost", "decision")
+    workflow.add_edge("backtesting_engine", "decision")
     workflow.add_edge("decision", END)
 
     memory_saver = MemorySaver()
@@ -432,7 +596,7 @@ def create_simplified_graph(analyst_types: List[AnalystType] = None) -> StateGra
     Create a graph with only selected analyst nodes.
     
     Useful for testing specific analysts or for environments where
-    some data sources are unavailable.
+    some data sources are unavailable. Includes Phase 3-4 portfolio analysis.
     
     Args:
         analyst_types: List of analyst types to include. If None, includes all.
@@ -442,10 +606,30 @@ def create_simplified_graph(analyst_types: List[AnalystType] = None) -> StateGra
     # Always include these
     stock_data_node = StockDataNode()
     consensus_node = ConsensusNode()
+    portfolio_risk_node = PortfolioRiskNode()
+    portfolio_optimization_node = PortfolioOptimizationNode()
+    macro_scenario_node = MacroScenarioNode()
+    multi_scenario_analysis_node = MultiScenarioAnalysisNode()
+    rebalancing_node = RebalancingNode()
+    # Phase 5 nodes
+    efficient_frontier_node = EfficientFrontierNode()
+    performance_attribution_node = PerformanceAttributionNode()
+    transaction_cost_node = TransactionCostNode()
+    backtesting_engine_node = BacktestingEngineNode()
     decision_node = DecisionNode()
 
     workflow.add_node("stock_data", stock_data_node.execute)
     workflow.add_node("consensus", consensus_node.execute)
+    workflow.add_node("portfolio_risk", portfolio_risk_node.execute)
+    workflow.add_node("portfolio_optimization", portfolio_optimization_node.execute)
+    workflow.add_node("macro_scenario", macro_scenario_node.execute)
+    workflow.add_node("multi_scenario_analysis", multi_scenario_analysis_node.execute)
+    workflow.add_node("rebalancing", rebalancing_node.execute)
+    # Phase 5 nodes
+    workflow.add_node("efficient_frontier", efficient_frontier_node.execute)
+    workflow.add_node("performance_attribution", performance_attribution_node.execute)
+    workflow.add_node("transaction_cost", transaction_cost_node.execute)
+    workflow.add_node("backtesting_engine", backtesting_engine_node.execute)
     workflow.add_node("decision", decision_node.execute)
 
     # Map analyst type to node
@@ -477,7 +661,22 @@ def create_simplified_graph(analyst_types: List[AnalystType] = None) -> StateGra
         workflow.add_edge("stock_data", node_name)
         workflow.add_edge(node_name, "consensus")
 
-    workflow.add_edge("consensus", "decision")
+    workflow.add_edge("consensus", "portfolio_risk")
+    workflow.add_edge("portfolio_risk", "portfolio_optimization")
+    workflow.add_edge("portfolio_optimization", "macro_scenario")
+    workflow.add_edge("portfolio_optimization", "rebalancing")
+    workflow.add_edge("macro_scenario", "multi_scenario_analysis")
+    workflow.add_edge("rebalancing", "multi_scenario_analysis")
+    # Phase 5 branches
+    workflow.add_edge("multi_scenario_analysis", "efficient_frontier")
+    workflow.add_edge("multi_scenario_analysis", "performance_attribution")
+    workflow.add_edge("multi_scenario_analysis", "transaction_cost")
+    workflow.add_edge("multi_scenario_analysis", "backtesting_engine")
+    # Phase 5 converges to decision
+    workflow.add_edge("efficient_frontier", "decision")
+    workflow.add_edge("performance_attribution", "decision")
+    workflow.add_edge("transaction_cost", "decision")
+    workflow.add_edge("backtesting_engine", "decision")
     workflow.add_edge("decision", END)
 
     memory_saver = MemorySaver()
