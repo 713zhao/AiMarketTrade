@@ -14,10 +14,8 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import asyncio
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from state import DeerflowState, AnalystType
-from graph import (
+from deerflow_openbb.state import DeerflowState, AnalystType
+from deerflow_openbb.graph import (
     create_deerflow_graph,
     create_mock_graph,
     create_simplified_graph,

@@ -15,9 +15,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 from datetime import datetime, timedelta
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from state import (
+from deerflow_openbb.state import (
     DeerflowState,
     ConsensusSignal,
     SignalType,
@@ -30,7 +28,7 @@ from state import (
     PerformanceAttribution,
     RiskAnalysis,
 )
-from nodes import (
+from deerflow_openbb.nodes import (
     EfficientFrontierNode,
     PerformanceAttributionNode,
     TransactionCostNode,

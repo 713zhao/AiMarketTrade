@@ -16,8 +16,6 @@ from pydantic import BaseModel, Field
 
 from .state import (
     DeerflowState,
-    BaseNode,
-    NodeResult,
     Order,
     BrokerAccount,
     BrokerPosition,
@@ -27,6 +25,7 @@ from .state import (
     ComplianceRecord,
     TransactionExecutionPlan,
 )
+from .nodes.base import BaseNode, NodeResult
 
 
 logger = logging.getLogger(__name__)

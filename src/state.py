@@ -515,6 +515,499 @@ class PortfolioOptimizationResult(BaseModel):
     analyst_type: AnalystType = AnalystType.PORTFOLIO_OPTIMIZATION
 
 
+# Forward declaration of classes needed by DeerflowState
+class MarketRegime(str, Enum):
+    """Classification of market regime."""
+    BULL_HIGH_VOL = "bull_high_vol"      # Strong but volatile
+    BULL_LOW_VOL = "bull_low_vol"        # Steady growth
+    BEAR_HIGH_VOL = "bear_high_vol"      # Declining volatility rising
+    BEAR_LOW_VOL = "bear_low_vol"        # Stable decline
+    SIDEWAYS = "sideways"                # Ranging market
+    CRISIS = "crisis"                    # Market stress/crash
+
+
+class MacroScenario(BaseModel):
+    """
+    Macroeconomic scenario for multi-scenario analysis.
+    
+    Represents a plausible future economic environment and
+    its implications for market returns and sector performance.
+    """
+    scenario_id: int = Field(description="Unique scenario identifier")
+    scenario_name: str = Field(description="Descriptive name (e.g., 'Soft Landing', 'Stagflation')")
+    probability: float = Field(0.25, ge=0.0, le=1.0, description="Probability of scenario (0-1)")
+    
+    # Economic assumptions
+    gdp_growth: float = Field(0.0, description="Expected GDP growth rate")
+    inflation_rate: float = Field(0.0, description="Expected inflation rate")
+    unemployment_rate: float = Field(0.05, description="Expected unemployment rate")
+    interest_rate: float = Field(0.04, description="Expected policy rate (10yr equivalent)")
+    
+    # Market environment
+    market_regime: "MarketRegime" = Field(MarketRegime.SIDEWAYS, description="Regime classification")
+    volatility_expectation: float = Field(0.15, description="Expected market volatility")
+    correlation_expectation: float = Field(0.4, description="Expected avg stock correlation")
+    
+    # Sector impacts (returns relative to base case)
+    sector_impacts: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Expected return adjustments by sector (%)"
+    )
+    
+    # Asset class impacts
+    equity_premium: float = Field(0.06, description="Equity risk premium")
+    bond_yield: float = Field(0.03, description="Expected 10yr bond yield")
+    commodity_price_change: float = Field(0.0, description="Commodity price % change")
+    currency_volatility: float = Field(0.08, description="FX volatility")
+    
+    # Portfolio implications
+    portfolio_return_forecast: float = Field(0.0, description="Expected portfolio return in scenario")
+    portfolio_volatility_forecast: float = Field(0.15, description="Expected portfolio volatility")
+    
+    # Risk factors stressed
+    stressed_factors: List[str] = Field(
+        default_factory=list,
+        description="Key factors stressed in this scenario"
+    )
+    
+    # Description
+    narrative: str = Field("", description="Scenario description and rationale")
+
+
+class RebalancingRule(BaseModel):
+    """
+    Rebalancing decision based on portfolio drift and opportunity.
+    """
+    rule_id: int = Field(description="Rule identifier")
+    rule_type: str = Field("threshold", description="drift_threshold, opportunity, scheduled")
+    
+    # Drift monitoring
+    position_drift_threshold: float = Field(0.05, description="Rebalance if position drifts >5%")
+    portfolio_drift_threshold: float = Field(0.10, description="Rebalance if portfolio drifts >10%")
+    
+    # Scheduled rebalancing
+    rebalance_frequency: str = Field("monthly", description="monthly, quarterly, semi-annual")
+    
+    # Opportunity rebalancing
+    volatility_spike_threshold: float = Field(0.30, description="Rebalance if vol spikes >30%")
+    sector_rotation_threshold: float = Field(0.15, description="Rebalance on >15% sector rotation")
+    
+    # Execution
+    max_turnover_per_rebalance: float = Field(0.20, description="Max 20% of portfolio turnover")
+    tax_loss_harvesting: bool = Field(True, description="Harvest tax losses when rebalancing")
+    
+    # Current state
+    should_rebalance: bool = Field(False, description="Rebalancing recommended?")
+    rebalancing_rationale: str = Field("", description="Why rebalancing is/isn't needed")
+    estimated_trades: List[Dict[str, Any]] = Field(default_factory=list, description="Proposed trades")
+
+
+class PerformanceAttribution(BaseModel):
+    """
+    Attribution analysis: what drove returns?
+    
+    Decomposes portfolio performance into:
+    - Allocation effect: Due to tactical allocation decisions
+    - Selection effect: Due to picking best performers
+    - Interaction effect: Combined effect
+    """
+    ticker: str = Field(description="Ticker symbol")
+    period_return: float = Field(0.0, description="Total return in period")
+    technical_contribution: float = Field(0.0, description="Return from technical factors")
+    fundamental_contribution: float = Field(0.0, description="Return from fundamental factors")
+    sentiment_contribution: float = Field(0.0, description="Return from sentiment/news")
+    macro_contribution: float = Field(0.0, description="Return from macro factors")
+    idiosyncratic_return: float = Field(0.0, description="Unexplained return")
+    signal_accuracy: float = Field(0.55, description="Accuracy  of trading signals")
+    timing_effectiveness: float = Field(0.5, description="Effectiveness of trade timing")
+
+
+class EfficientFrontierPoint(BaseModel):
+    """
+    Point on the efficient frontier: portfolio with optimal risk/return.
+    """
+    portfolio_id: int = Field(description="Portfolio identifier on frontier")
+    expected_return: float = Field(0.0, description="Expected annual return")
+    volatility: float = Field(0.15, description="Expected volatility (annualized)")
+    sharpe_ratio: float = Field(0.0, description="Sharpe ratio")
+    
+    # Allocation
+    portfolio_weights: Dict[str, float] = Field(default_factory=dict, description="Ticker weights")
+    
+    # Risk metrics
+    risk_adjusted_return: float = Field(0.0, description="Return/volatility ratio")
+    herfindahl_index: float = Field(0.0, description="Concentration metric")
+    effective_assets: float = Field(0.0, description="Effective number of assets")
+
+
+class MultiScenarioAnalysis(BaseModel):
+    """
+    Multi-scenario portfolio analysis.
+    
+    Analyzes portfolio performance under different macro scenarios
+    and market regimes for robust decision-making.
+    """
+    scenarios: List[MacroScenario] = Field(default_factory=list, description="Macro scenarios")
+    
+    # Results per scenario
+    scenario_portfolio_returns: Dict[int, float] = Field(
+        default_factory=dict,
+        description="Portfolio return in each scenario"
+    )
+    scenario_portfolio_volatility: Dict[int, float] = Field(
+        default_factory=dict,
+        description="Portfolio volatility in each scenario"
+    )
+    
+    # Expected value calculation
+    expected_return: float = Field(0.0, description="Probability-weighted expected return")
+    expected_volatility: float = Field(0.0, description="Probability-weighted volatility")
+    
+    # Robust metrics
+    worst_case_return: float = Field(0.0, description="Return in worst scenario")
+    best_case_return: float = Field(0.0, description="Return in best scenario")
+    return_range: float = Field(0.0, description="Spread between worst/best")
+    
+    # Robustness assessment
+    scenario_resilience: float = Field(0.5, description="Resilience score (0-1, higher=more robust)")
+    recommendations: List[str] = Field(
+        default_factory=list,
+        description="Recommendations for improving robustness"
+    )
+    
+    narrative: str = Field("", description="Multi-scenario analysis summary")
+
+
+# Phase 5 model classes (needed before DeerflowState)
+class BacktestPeriod(BaseModel):
+    """Historical backtest period results."""
+    period_id: int = Field(description="Period identifier")
+    start_date: datetime = Field(description="Period start date")
+    end_date: datetime = Field(description="Period end date")
+    portfolio_return: float = Field(0.0, description="Portfolio return in period")
+    benchmark_return: float = Field(0.0, description="Benchmark return")
+    outperformance: float = Field(0.0, description="Active return vs benchmark")
+    volatility: float = Field(0.0, description="Period volatility")
+    max_drawdown: float = Field(0.0, description="Maximum drawdown in period")
+    sharpe_ratio: float = Field(0.0, description="Sharpe ratio")
+    num_trades: int = Field(0, description="Number of trades executed")
+    total_costs: float = Field(0.0, description="Total transaction costs")
+    turnover: float = Field(0.0, description="Portfolio turnover")
+
+
+class BacktestResult(BaseModel):
+    """Complete backtest validation of trading strategy."""
+    backtest_id: str = Field(description="Unique backtest identifier")
+    backtest_name: str = Field(description="Descriptive name")
+    backtest_start_date: datetime = Field(description="Backtest period start")
+    backtest_end_date: datetime = Field(description="Backtest period end")
+    backtest_period_days: int = Field(0, description="Number of trading days")
+    initial_capital: float = Field(1000000, description="Starting capital")
+    final_portfolio_value: float = Field(0.0, description="Ending portfolio value")
+    total_return: float = Field(0.0, description="Cumulative total return")
+    annualized_return: float = Field(0.0, description="Annualized return (%)")
+    volatility: float = Field(0.0, description="Annualized volatility (%)")
+    sharpe_ratio: float = Field(0.0, description="Overall Sharpe ratio")
+    sortino_ratio: float = Field(0.0, description="Downside risk adjusted")
+    max_drawdown: float = Field(0.0, description="Maximum drawdown (%)")
+    maximum_drawdown: float = Field(0.0, description="Max DD during backtest")
+    winning_trades: int = Field(0, description="Number of winning trades")
+    losing_trades: int = Field(0, description="Number of losing trades")
+    win_rate: float = Field(0.0, description="Win rate")
+    profit_factor: float = Field(0.0, description="Profit / loss")
+    trades_executed: int = Field(0, description="Total transaction count")
+    total_transaction_costs: float = Field(0.0, description="Total transaction costs")
+    best_day: float = Field(0.0, description="Best daily return")
+    worst_day: float = Field(0.0, description="Worst daily return")
+    recovery_time_days: int = Field(0, description="Average recovery time")
+    final_commentary: str = Field("", description="Backtest summary")
+    summary: str = Field("", description="Backtest results summary")
+
+
+class EfficientFrontierPoint(BaseModel):
+    """Point on efficient frontier."""
+    portfolio_id: int = Field(description="Portfolio identifier")
+    expected_return: float = Field(0.0, description="Expected return")
+    volatility: float = Field(0.15, description="Expected volatility")
+    sharpe_ratio: float = Field(0.0, description="Sharpe ratio")
+    portfolio_weights: Dict[str, float] = Field(default_factory=dict, description="Ticker weights")
+    risk_adjusted_return: float = Field(0.0, description="Return/volatility")
+    herfindahl_index: float = Field(0.0, description="Concentration metric")
+    effective_assets: float = Field(0.0, description="Effective number of assets")
+
+
+class EfficientFrontierData(BaseModel):
+    """Multiple portfolios spanning the efficient frontier."""
+    num_portfolios: int = Field(50, description="Number of portfolios on frontier")
+    min_return: float = Field(0.0, description="Minimum return on frontier")
+    max_return: float = Field(0.20, description="Maximum return on frontier")
+    portfolios: List[EfficientFrontierPoint] = Field(default_factory=list, description="Frontier portfolios")
+    global_minimum_variance: Optional[EfficientFrontierPoint] = Field(None, description="Lowest risk")
+    maximum_sharpe_portfolio: Optional[EfficientFrontierPoint] = Field(None, description="Best risk-adjusted")
+    current_portfolio: Optional[EfficientFrontierPoint] = Field(None, description="Current allocation")
+    summary: str = Field("", description="Frontier analysis summary")
+
+
+class TransactionExecutionPlan(BaseModel):
+    """Detailed execution plan with transaction costs."""
+    execution_id: str = Field(description="Unique execution identifier")
+    execution_date: datetime = Field(default_factory=datetime.utcnow)
+    trades: List[Dict[str, Any]] = Field(default_factory=list, description="Individual trades")
+    estimated_commission: float = Field(0.0, description="Estimated commission")
+    estimated_market_impact: float = Field(0.0, description="Estimated market impact")
+    estimated_slippage: float = Field(0.0, description="Estimated slippage")
+    estimated_opportunity_cost: float = Field(0.0, description="Cost of delayed execution")
+    total_estimated_cost: float = Field(0.0, description="Total costs")
+    total_cost_bps: float = Field(0.0, description="Costs in basis points")
+    execution_strategy: str = Field("vwap", description="Execution algorithm")
+    execution_timeline: str = Field("1 day", description="Execution speed")
+    summary: str = Field("", description="Execution plan summary")
+
+
+class PortfolioSnapshot(BaseModel):
+    """Real-time portfolio state and metrics snapshot."""
+    snapshot_id: str = Field(description="Unique snapshot identifier")
+    snapshot_time: datetime = Field(default_factory=datetime.utcnow)
+    current_positions: Dict[str, float] = Field(default_factory=dict, description="Current holdings")
+    target_positions: Dict[str, float] = Field(default_factory=dict, description="Target allocations")
+    total_value: float = Field(0.0, description="Total portfolio value")
+    cash_position: float = Field(0.0, description="Cash & equivalents")
+    portfolio_volatility: float = Field(0.0, description="Current volatility")
+    portfolio_beta: float = Field(1.0, description="Market beta")
+    portfolio_drawdown: float = Field(0.0, description="Current drawdown")
+    ytd_return: float = Field(0.0, description="Year-to-date return")
+    rebalancing_needed: bool = Field(False, description="Rebalancing triggered?")
+
+
+class LiveTradingSession(BaseModel):
+    """Real-time active trading session state."""
+    session_id: str = Field(description="Unique session identifier")
+    session_start: datetime = Field(description="Session start time")
+    session_end: Optional[datetime] = Field(None, description="Session end time")
+    starting_portfolio: Dict[str, float] = Field(default_factory=dict)
+    current_portfolio: Dict[str, float] = Field(default_factory=dict)
+    starting_value: float = Field(0.0, description="Starting value")
+    current_value: float = Field(0.0, description="Current value")
+    session_pnl: float = Field(0.0, description="Session PnL")
+    session_pnl_pct: float = Field(0.0, description="Session return %")
+    trades_executed: List[Dict[str, Any]] = Field(default_factory=list, description="Executed trades")
+    total_commissions: float = Field(0.0, description="Total commissions")
+    is_active: bool = Field(True, description="Is session active?")
+
+
+class PerformanceMetricsSnapshot(BaseModel):
+    """Comprehensive real-time performance metrics snapshot."""
+    metrics_date: datetime = Field(default_factory=datetime.utcnow)
+    daily_return: float = Field(0.0, description="Daily return")
+    weekly_return: float = Field(0.0, description="Weekly return")
+    monthly_return: float = Field(0.0, description="Monthly return")
+    ytd_return: float = Field(0.0, description="Year-to-date return")
+    inception_return: float = Field(0.0, description="Inception return")
+    daily_volatility: float = Field(0.0, description="Daily volatility")
+    current_drawdown: float = Field(0.0, description="Current drawdown")
+    sharpe_ratio: float = Field(0.0, description="Sharpe ratio")
+    sortino_ratio: float = Field(0.0, description="Sortino ratio")
+    positive_days: int = Field(0, description="Positive days")
+    total_days: int = Field(0, description="Total days")
+    win_rate: float = Field(0.0, description="Win rate %")
+    best_day: float = Field(0.0, description="Best daily return")
+    worst_day: float = Field(0.0, description="Worst daily return")
+
+
+class TransactionCostAnalysis(BaseModel):
+    """Analysis of transaction costs."""
+    transaction_type: str = Field("rebalancing", description="Type of transaction")
+    estimated_total_cost: float = Field(0.0, description="Total cost")
+    percentage_of_portfolio: float = Field(0.0, description="Cost as % of portfolio")
+    commission_cost: float = Field(0.0, description="Commission cost")
+    bid_ask_spread_cost: float = Field(0.0, description="Bid-ask spread cost")
+    market_impact_cost: float = Field(0.0, description="Market impact cost")
+    number_of_trades: int = Field(0, description="Number of trades")
+    cost_breakdown: Dict[str, float] = Field(default_factory=dict, description="Cost by ticker")
+    cost_minimization_strategies: List[str] = Field(default_factory=list, description="Strategies")
+    net_benefit_analysis: str = Field("", description="Benefit analysis")
+    confidence: float = Field(0.75, description="Confidence level")
+
+
+# ============================================================================
+# PHASE 6: Broker API Integration & Live Trading - Define before DeerflowState
+# ============================================================================
+
+class BrokerAccount(BaseModel):
+    """
+    Broker account credentials and configuration.
+    
+    经纪账户凭证和配置：存储API密钥、账户设置和风险限制。
+    """
+    broker_id: str = Field(description="Broker identifier (alpaca, ib, etc)")
+    account_id: str = Field(description="Broker account number")
+    account_name: str = Field(description="Display name")
+    is_live: bool = Field(False, description="Paper or live trading")
+    base_url: str = Field("", description="API endpoint")
+    max_daily_loss: float = Field(-0.02, description="Max daily loss % (-2%)")
+    max_position_size: float = Field(0.10, description="Max capital % per position")
+    max_leverage: float = Field(2.0, description="Max leverage allowed")
+    last_validated: Optional[datetime] = Field(None, description="Last connection check")
+
+
+class Order(BaseModel):
+    """
+    Pending or filled order details.
+    
+    订单详情：包括待执行和已成交订单。
+    """
+    order_id: str = Field(description="Unique order ID")
+    broker_id: str = Field(description="Which broker")
+    ticker: str = Field(description="Security symbol")
+    order_type: str = Field(description="BUY, SELL, SHORT, COVER")
+    execution_type: str = Field(description="MARKET, LIMIT, STOP, STOP_LIMIT, TRAILING_STOP")
+    quantity: int = Field(description="Shares/contracts")
+    price: Optional[float] = Field(None, description="Limit price (if applicable)")
+    stop_price: Optional[float] = Field(None, description="Stop price (if applicable)")
+    status: str = Field(description="PENDING, SUBMITTED, FILLED, PARTIAL, CANCELLED, REJECTED")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    filled_at: Optional[datetime] = Field(None, description="Execution timestamp")
+    filled_price: Optional[float] = Field(None, description="Actual execution price")
+    filled_quantity: int = Field(0, description="Filled shares")
+    commission: float = Field(0.0, description="Transaction cost")
+    reason: str = Field("", description="Cancellation/rejection reason")
+
+
+class BrokerPosition(BaseModel):
+    """
+    Active holdings in broker account.
+    
+    经纪账户中的活跃持仓。
+    """
+    position_id: str = Field(description="Unique position ID")
+    broker_id: str = Field(description="Which broker")
+    ticker: str = Field(description="Security symbol")
+    quantity: int = Field(description="Current shares")
+    avg_cost: float = Field(0.0, description="Average entry price")
+    current_price: float = Field(0.0, description="Last market price")
+    market_value: float = Field(0.0, description="Position value")
+    unrealized_pnl: float = Field(0.0, description="Open P&L")
+    realized_pnl: float = Field(0.0, description="Closed P&L")
+    unrealized_pnl_pct: float = Field(0.0, description="P&L percentage")
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Trade(BaseModel):
+    """
+    Completed trades (buy/sell pairs).
+    
+    已成交交易（买卖对）。
+    """
+    trade_id: str = Field(description="Unique trade ID")
+    broker_id: str = Field(description="Which broker")
+    ticker: str = Field(description="Security")
+    entry_order_id: str = Field(description="Opens the trade")
+    exit_order_id: Optional[str] = Field(None, description="Closes the trade")
+    entry_price: float = Field(description="Entry execution price")
+    exit_price: Optional[float] = Field(None, description="Exit price")
+    quantity: int = Field(description="Shares")
+    entry_time: datetime = Field(description="Entry timestamp")
+    exit_time: Optional[datetime] = Field(None, description="Exit timestamp")
+    duration_seconds: Optional[int] = Field(None, description="Trade duration")
+    gross_pnl: float = Field(0.0, description="P&L before costs")
+    net_pnl: float = Field(0.0, description="P&L after commissions")
+    entry_commission: float = Field(0.0, description="Buy commission")
+    exit_commission: float = Field(0.0, description="Sell commission")
+    status: str = Field("OPEN", description="OPEN, CLOSED, PARTIAL")
+    notes: str = Field("", description="Entry reason, exit reason")
+
+
+class BrokerAccountState(BaseModel):
+    """
+    Real-time broker account status and positions.
+    
+    实时经纪账户状态和持仓。
+    """
+    account_id: str = Field(description="Broker account ID")
+    broker_id: str = Field(description="Broker identifier")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Account metrics
+    cash: float = Field(0.0, description="Available cash")
+    buying_power: float = Field(0.0, description="Cash × (1 + leverage)")
+    total_value: float = Field(0.0, description="Cash + portfolio value")
+    portfolio_value: float = Field(0.0, description="Position values sum")
+    day_trading_power: float = Field(0.0, description="Remaining day trade power")
+    maintenance_requirement: float = Field(0.0, description="Collateral needed")
+    maintenance_excess: float = Field(0.0, description="Excess collateral")
+    equity_percent: float = Field(1.0, description="Equity as % of total")
+    
+    # Account status
+    is_margin_call: bool = Field(False, description="Margin call flag")
+    last_checked: datetime = Field(default_factory=datetime.utcnow)
+    
+    # P&L
+    unrealized_day_pnl: float = Field(0.0, description="Today's P&L")
+    realized_day_pnl: float = Field(0.0, description="Today's realized P&L")
+    realized_mtd_pnl: float = Field(0.0, description="Month-to-date realized")
+    
+    # Holdings
+    open_positions: List[BrokerPosition] = Field(default_factory=list)
+    pending_orders: List[Order] = Field(default_factory=list)
+    recent_trades: List[Trade] = Field(default_factory=list)
+
+
+class BrokerExecutionPlan(BaseModel):
+    """
+    Execution plan with broker routing.
+    
+    执行计划，包括经纪商路由。
+    """
+    execution_id: str = Field(description="Unique execution ID")
+    plan_id: str = Field(description="From Phase 5 TransactionExecutionPlan")
+    broker_id: str = Field(description="Selected broker")
+    account_id: str = Field(description="Selected account")
+    trades: List[Order] = Field(default_factory=list, description="Orders to execute")
+    total_commission: float = Field(0.0, description="Expected total cost")
+    execution_priority: str = Field("IMMEDIATE", description="Execution approach")
+    max_slippage_bps: float = Field(10.0, description="Max slippage tolerance bps")
+    time_limit_minutes: int = Field(60, description="Max time to execute all")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: Optional[datetime] = Field(None)
+    completed_at: Optional[datetime] = Field(None)
+    status: str = Field("PLANNED", description="PLANNED, IN_PROGRESS, COMPLETED, FAILED, CANCELLED")
+    filled_orders: List[Order] = Field(default_factory=list)
+    execution_summary: str = Field("", description="Narrative of execution")
+
+
+class ComplianceRecord(BaseModel):
+    """
+    Audit trail record for compliance and regulatory reporting.
+    
+    审计日志记录，用于合规和监管报告。
+    """
+    record_id: str = Field(description="Unique record ID")
+    record_type: str = Field(description="ORDER_SUBMITTED, ORDER_FILLED, POSITION_OPENED, etc")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    broker_id: str = Field(description="Which broker")
+    account_id: str = Field(description="Which account")
+    
+    # Event details
+    ticker: Optional[str] = Field(None, description="Security symbol")
+    order_id: Optional[str] = Field(None, description="Related order")
+    trade_id: Optional[str] = Field(None, description="Related trade")
+    
+    # Values and state
+    quantity: Optional[int] = Field(None, description="Trade quantity")
+    price: Optional[float] = Field(None, description="Execution price")
+    commission: Optional[float] = Field(None, description="Transaction cost")
+    
+    # Account state snapshot
+    account_value_before: float = Field(0.0)
+    account_value_after: float = Field(0.0)
+    cash_before: float = Field(0.0)
+    cash_after: float = Field(0.0)
+    
+    # Event description
+    description: str = Field("", description="Event narrative")
+    error: Optional[str] = Field(None, description="Any error message")
+
+
 class DeerflowState(BaseModel):
     """
     Master state object that flows through the entire deerflow graph.
@@ -630,222 +1123,6 @@ class DeerflowState(BaseModel):
         if node not in self.errors:
             self.errors[node] = []
         self.errors[node].append(error_entry)
-
-
-# ============================================================================
-# PHASE 4: Advanced Optimization & Macro Integration Models
-# ============================================================================
-
-class MarketRegime(str, Enum):
-    """Classification of market regime."""
-    BULL_HIGH_VOL = "bull_high_vol"      # Strong but volatile
-    BULL_LOW_VOL = "bull_low_vol"        # Steady growth
-    BEAR_HIGH_VOL = "bear_high_vol"      # Declining volatility rising
-    BEAR_LOW_VOL = "bear_low_vol"        # Stable decline
-    SIDEWAYS = "sideways"                # Ranging market
-    CRISIS = "crisis"                    # Market stress/crash
-
-
-class MacroScenario(BaseModel):
-    """
-    Macroeconomic scenario for multi-scenario analysis.
-    
-    Represents a plausible future economic environment and
-    its implications for market returns and sector performance.
-    """
-    scenario_id: int = Field(description="Unique scenario identifier")
-    scenario_name: str = Field(description="Descriptive name (e.g., 'Soft Landing', 'Stagflation')")
-    probability: float = Field(0.25, ge=0.0, le=1.0, description="Probability of scenario (0-1)")
-    
-    # Economic assumptions
-    gdp_growth: float = Field(0.0, description="Expected GDP growth rate")
-    inflation_rate: float = Field(0.0, description="Expected inflation rate")
-    unemployment_rate: float = Field(0.05, description="Expected unemployment rate")
-    interest_rate: float = Field(0.04, description="Expected policy rate (10yr equivalent)")
-    
-    # Market environment
-    market_regime: MarketRegime = Field(MarketRegime.SIDEWAYS, description="Regime classification")
-    volatility_expectation: float = Field(0.15, description="Expected market volatility")
-    correlation_expectation: float = Field(0.4, description="Expected avg stock correlation")
-    
-    # Sector impacts (returns relative to base case)
-    sector_impacts: Dict[str, float] = Field(
-        default_factory=dict,
-        description="Expected return adjustments by sector (%)"
-    )
-    
-    # Asset class impacts
-    equity_premium: float = Field(0.06, description="Equity risk premium")
-    bond_yield: float = Field(0.03, description="Expected 10yr bond yield")
-    commodity_price_change: float = Field(0.0, description="Commodity price % change")
-    currency_volatility: float = Field(0.08, description="FX volatility")
-    
-    # Portfolio implications
-    portfolio_return_forecast: float = Field(0.0, description="Expected portfolio return in scenario")
-    portfolio_volatility_forecast: float = Field(0.15, description="Expected portfolio volatility")
-    
-    # Risk factors stressed
-    stressed_factors: List[str] = Field(
-        default_factory=list,
-        description="Key factors stressed in this scenario"
-    )
-    
-    # Description
-    narrative: str = Field("", description="Scenario description and rationale")
-
-
-class RebalancingRule(BaseModel):
-    """
-    Rebalancing decision based on portfolio drift and opportunity.
-    """
-    rule_id: int = Field(description="Rule identifier")
-    rule_type: str = Field("threshold", description="drift_threshold, opportunity, scheduled")
-    
-    # Drift monitoring
-    position_drift_threshold: float = Field(0.05, description="Rebalance if position drifts >5%")
-    portfolio_drift_threshold: float = Field(0.10, description="Rebalance if portfolio drifts >10%")
-    
-    # Scheduled rebalancing
-    rebalance_frequency: str = Field("monthly", description="monthly, quarterly, semi-annual")
-    
-    # Opportunity rebalancing
-    volatility_spike_threshold: float = Field(0.30, description="Rebalance if vol spikes >30%")
-    sector_rotation_threshold: float = Field(0.15, description="Rebalance on >15% sector rotation")
-    
-    # Execution
-    max_turnover_per_rebalance: float = Field(0.20, description="Max 20% of portfolio turnover")
-    tax_loss_harvesting: bool = Field(True, description="Harvest tax losses when rebalancing")
-    
-    # Current state
-    should_rebalance: bool = Field(False, description="Rebalancing recommended?")
-    rebalancing_rationale: str = Field("", description="Why rebalancing is/isn't needed")
-    estimated_trades: List[Dict[str, Any]] = Field(default_factory=list, description="Proposed trades")
-
-
-class PerformanceAttribution(BaseModel):
-    """
-    Attribution analysis: what drove returns?
-    
-    Decomposes portfolio performance into:
-    - Allocation effect: Due to tactical allocation decisions
-    - Selection effect: Due to picking best performers
-    - Interaction effect: Combined effect
-    """
-    period: str = Field("daily", description="daily, weekly, monthly")
-    start_date: datetime = Field(default_factory=datetime.utcnow)
-    end_date: datetime = Field(default_factory=datetime.utcnow)
-    
-    # Total performance
-    portfolio_return: float = Field(0.0, description="Total portfolio return in period")
-    benchmark_return: float = Field(0.0, description="Benchmark return (S&P 500)")
-    active_return: float = Field(0.0, description="Outperformance vs benchmark")
-    
-    # Attribution components
-    allocation_effect: float = Field(0.0, description="Return from allocation decisions")
-    selection_effect: float = Field(0.0, description="Return from security selection")
-    interaction_effect: float = Field(0.0, description="Combined interaction effect")
-    
-    # Risk metrics
-    portfolio_volatility: float = Field(0.0, description="Realized portfolio volatility")
-    benchmark_volatility: float = Field(0.0, description="Benchmark volatility")
-    tracking_error: float = Field(0.0, description="Active risk vs benchmark")
-    information_ratio: float = Field(0.0, description="Active return / tracking error")
-    
-    # Per-holding attribution
-    holding_attribution: Dict[str, Dict[str, float]] = Field(
-        default_factory=dict,
-        description="Return contribution by ticker: {ticker: {allocation_effect, selection_effect, total_return}}"
-    )
-    
-    # Sector attribution
-    sector_attribution: Dict[str, Dict[str, float]] = Field(
-        default_factory=dict,
-        description="Return contribution by sector"
-    )
-    
-    # Summary
-    top_contributors: List[str] = Field(default_factory=list, description="Best performers")
-    top_detractors: List[str] = Field(default_factory=list, description="Worst performers")
-    
-    narrative: str = Field("", description="Performance summary")
-
-
-class EfficientFrontierPoint(BaseModel):
-    """
-    Point on the efficient frontier: portfolio with optimal risk/return.
-    """
-    portfolio_id: int = Field(description="Portfolio identifier on frontier")
-    expected_return: float = Field(0.0, description="Expected annual return")
-    volatility: float = Field(0.15, description="Expected volatility (annualized)")
-    sharpe_ratio: float = Field(0.0, description="Sharpe ratio")
-    
-    # Allocation
-    position_weights: Dict[str, float] = Field(default_factory=dict, description="Ticker weights")
-    
-    # Risk metrics
-    var_95: float = Field(0.0, description="Value at Risk at 95% confidence")
-    max_drawdown: float = Field(0.0, description="Expected maximum drawdown")
-    
-    # Characteristics
-    diversification_ratio: float = Field(1.0, description="Portfolio diversification metric")
-    concentration_hhi: float = Field(0.0, description="Herfindahl index")
-    
-    # Regime analysis
-    returns_by_regime: Dict[str, float] = Field(
-        default_factory=dict,
-        description="Expected returns in different market regimes"
-    )
-
-
-class MultiScenarioAnalysis(BaseModel):
-    """
-    Multi-scenario portfolio analysis.
-    
-    Analyzes portfolio performance under different macro scenarios
-    and market regimes for robust decision-making.
-    """
-    analysis_date: datetime = Field(default_factory=datetime.utcnow)
-    
-    # Scenarios analyzed
-    scenarios: List[MacroScenario] = Field(default_factory=list, description="Macro scenarios")
-    
-    # Results per scenario
-    scenario_portfolio_returns: Dict[int, float] = Field(
-        default_factory=dict,
-        description="Portfolio return in each scenario"
-    )
-    scenario_portfolio_volatility: Dict[int, float] = Field(
-        default_factory=dict,
-        description="Portfolio volatility in each scenario"
-    )
-    
-    # Expected value calculation
-    expected_return: float = Field(0.0, description="Probability-weighted expected return")
-    expected_volatility: float = Field(0.0, description="Probability-weighted volatility")
-    expected_skewness: float = Field(0.0, description="Return distribution skewness")
-    expected_kurtosis: float = Field(0.0, description="Return distribution kurtosis (tail risk)")
-    
-    # Robust metrics
-    worst_case_return: float = Field(0.0, description="Return in worst scenario")
-    best_case_return: float = Field(0.0, description="Return in best scenario")
-    return_range: float = Field(0.0, description="Spread between worst/best")
-    
-    # Regime analysis
-    regime_returns: Dict[str, float] = Field(
-        default_factory=dict,
-        description="Portfolio returns in each market regime"
-    )
-    worst_regime_return: float = Field(0.0, description="Worst regime return")
-    best_regime_return: float = Field(0.0, description="Best regime return")
-    
-    # Robustness assessment
-    scenario_resilience: float = Field(0.5, description="Resilience score (0-1, higher=more robust)")
-    recommendations: List[str] = Field(
-        default_factory=list,
-        description="Recommendations for improving robustness"
-    )
-    
-    narrative: str = Field("", description="Multi-scenario analysis summary")
 
 
 # ============================================================================
@@ -1121,187 +1398,14 @@ class PerformanceMetricsSnapshot(BaseModel):
     avg_losing_day: float = Field(0.0, description="Average negative return")
 
 
-# ============================================================================
-# PHASE 6: Broker API Integration & Live Trading
-# ============================================================================
-
-class BrokerAccount(BaseModel):
-    """
-    Broker account credentials and configuration.
-    
-    经纪账户凭证和配置：存储API密钥、账户设置和风险限制。
-    """
-    broker_id: str = Field(description="Broker identifier (alpaca, ib, etc)")
-    account_id: str = Field(description="Broker account number")
-    account_name: str = Field(description="Display name")
-    is_live: bool = Field(False, description="Paper or live trading")
-    base_url: str = Field("", description="API endpoint")
-    max_daily_loss: float = Field(-0.02, description="Max daily loss % (-2%)")
-    max_position_size: float = Field(0.10, description="Max capital % per position")
-    max_leverage: float = Field(2.0, description="Max leverage allowed")
-    last_validated: Optional[datetime] = Field(None, description="Last connection check")
-
-
-class Order(BaseModel):
-    """
-    Pending or filled order details.
-    
-    订单详情：包括待执行和已成交订单。
-    """
-    order_id: str = Field(description="Unique order ID")
-    broker_id: str = Field(description="Which broker")
-    ticker: str = Field(description="Security symbol")
-    order_type: str = Field(description="BUY, SELL, SHORT, COVER")
-    execution_type: str = Field(description="MARKET, LIMIT, STOP, STOP_LIMIT, TRAILING_STOP")
-    quantity: int = Field(description="Shares/contracts")
-    price: Optional[float] = Field(None, description="Limit price (if applicable)")
-    stop_price: Optional[float] = Field(None, description="Stop price (if applicable)")
-    status: str = Field(description="PENDING, SUBMITTED, FILLED, PARTIAL, CANCELLED, REJECTED")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    filled_at: Optional[datetime] = Field(None, description="Execution timestamp")
-    filled_price: Optional[float] = Field(None, description="Actual execution price")
-    filled_quantity: int = Field(0, description="Filled shares")
-    commission: float = Field(0.0, description="Transaction cost")
-    reason: str = Field("", description="Cancellation/rejection reason")
-
-
-class BrokerPosition(BaseModel):
-    """
-    Active holdings in broker account.
-    
-    经纪账户中的活跃持仓。
-    """
-    position_id: str = Field(description="Unique position ID")
-    broker_id: str = Field(description="Which broker")
-    ticker: str = Field(description="Security symbol")
-    quantity: int = Field(description="Current shares")
-    avg_cost: float = Field(0.0, description="Average entry price")
-    current_price: float = Field(0.0, description="Last market price")
-    market_value: float = Field(0.0, description="Position value")
-    unrealized_pnl: float = Field(0.0, description="Open P&L")
-    realized_pnl: float = Field(0.0, description="Closed P&L")
-    unrealized_pnl_pct: float = Field(0.0, description="P&L percentage")
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-
-class Trade(BaseModel):
-    """
-    Completed trades (buy/sell pairs).
-    
-    已成交交易（买卖对）。
-    """
-    trade_id: str = Field(description="Unique trade ID")
-    broker_id: str = Field(description="Which broker")
-    ticker: str = Field(description="Security")
-    entry_order_id: str = Field(description="Opens the trade")
-    exit_order_id: Optional[str] = Field(None, description="Closes the trade")
-    entry_price: float = Field(description="Entry execution price")
-    exit_price: Optional[float] = Field(None, description="Exit price")
-    quantity: int = Field(description="Shares")
-    entry_time: datetime = Field(description="Entry timestamp")
-    exit_time: Optional[datetime] = Field(None, description="Exit timestamp")
-    duration_seconds: Optional[int] = Field(None, description="Trade duration")
-    gross_pnl: float = Field(0.0, description="P&L before costs")
-    net_pnl: float = Field(0.0, description="P&L after commissions")
-    entry_commission: float = Field(0.0, description="Buy commission")
-    exit_commission: float = Field(0.0, description="Sell commission")
-    status: str = Field("OPEN", description="OPEN, CLOSED, PARTIAL")
-    notes: str = Field("", description="Entry reason, exit reason")
-
-
-class BrokerAccountState(BaseModel):
-    """
-    Real-time broker account status and positions.
-    
-    实时经纪账户状态和持仓。
-    """
-    account_id: str = Field(description="Broker account ID")
-    broker_id: str = Field(description="Broker identifier")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    
-    # Account metrics
-    cash: float = Field(0.0, description="Available cash")
-    buying_power: float = Field(0.0, description="Cash × (1 + leverage)")
-    total_value: float = Field(0.0, description="Cash + portfolio value")
-    portfolio_value: float = Field(0.0, description="Position values sum")
-    day_trading_power: float = Field(0.0, description="Remaining day trade power")
-    maintenance_requirement: float = Field(0.0, description="Collateral needed")
-    maintenance_excess: float = Field(0.0, description="Excess collateral")
-    equity_percent: float = Field(1.0, description="Equity as % of total")
-    
-    # Account status
-    is_margin_call: bool = Field(False, description="Margin call flag")
-    last_checked: datetime = Field(default_factory=datetime.utcnow)
-    
-    # P&L
-    unrealized_day_pnl: float = Field(0.0, description="Today's P&L")
-    realized_day_pnl: float = Field(0.0, description="Today's realized P&L")
-    realized_mtd_pnl: float = Field(0.0, description="Month-to-date realized")
-    
-    # Holdings
-    open_positions: List[BrokerPosition] = Field(default_factory=list)
-    pending_orders: List[Order] = Field(default_factory=list)
-    recent_trades: List[Trade] = Field(default_factory=list)
-
-
-class BrokerExecutionPlan(BaseModel):
-    """
-    Execution plan with broker routing.
-    
-    执行计划，包括经纪商路由。
-    """
-    execution_id: str = Field(description="Unique execution ID")
-    plan_id: str = Field(description="From Phase 5 TransactionExecutionPlan")
-    broker_id: str = Field(description="Selected broker")
-    account_id: str = Field(description="Selected account")
-    trades: List[Order] = Field(default_factory=list, description="Orders to execute")
-    total_commission: float = Field(0.0, description="Expected total cost")
-    execution_priority: str = Field("IMMEDIATE", description="Execution approach")
-    max_slippage_bps: float = Field(10.0, description="Max slippage tolerance bps")
-    time_limit_minutes: int = Field(60, description="Max time to execute all")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    started_at: Optional[datetime] = Field(None)
-    completed_at: Optional[datetime] = Field(None)
-    status: str = Field("PLANNED", description="PLANNED, IN_PROGRESS, COMPLETED, FAILED, CANCELLED")
-    filled_orders: List[Order] = Field(default_factory=list)
-    execution_summary: str = Field("", description="Narrative of execution")
-
-
-class ComplianceRecord(BaseModel):
-    """
-    Audit trail record for compliance and regulatory reporting.
-    
-    审计日志记录，用于合规和监管报告。
-    """
-    record_id: str = Field(description="Unique record ID")
-    record_type: str = Field(description="ORDER_SUBMITTED, ORDER_FILLED, POSITION_OPENED, etc")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    broker_id: str = Field(description="Which broker")
-    account_id: str = Field(description="Which account")
-    
-    # Event details
-    ticker: Optional[str] = Field(None, description="Security symbol")
-    order_id: Optional[str] = Field(None, description="Related order")
-    trade_id: Optional[str] = Field(None, description="Related trade")
-    
-    # Values and state
-    quantity: Optional[int] = Field(None, description="Trade quantity")
-    price: Optional[float] = Field(None, description="Execution price")
-    commission: Optional[float] = Field(None, description="Transaction cost")
-    
-    # Account state snapshot
-    account_value_before: float = Field(0.0)
-    account_value_after: float = Field(0.0)
-    cash_before: float = Field(0.0)
-    cash_after: float = Field(0.0)
-    
-    # Event description
-    description: str = Field("", description="Event narrative")
-    error: Optional[str] = Field(None, description="Any error message")
-
 
 # Import and re-export for convenience
-from .config import get_settings
+try:
+    # Package context (when imported as deerflow_openbb module)
+    from .config import get_settings
+except ImportError:
+    # Direct context (when imported directly)
+    from config import get_settings
 
 __all__ = [
     "AnalystType",

@@ -7,7 +7,7 @@ execution of analyst nodes before consensus aggregation.
 """
 
 import asyncio
-from typing import Dict, Any, TypedDict
+from typing import Dict, Any, TypedDict, List
 from datetime import datetime
 
 from langgraph.graph import StateGraph, END

@@ -3,11 +3,6 @@ Test suite for deerflow-openbb configuration management.
 """
 
 import pytest
-import sys
-from pathlib import Path
-
-# Add src to path for testing
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from deerflow_openbb.config import Settings, get_settings, reload_settings
 

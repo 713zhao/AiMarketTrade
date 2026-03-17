@@ -6,11 +6,6 @@ import pytest
 from datetime import datetime
 from typing import List
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
-
 from deerflow_openbb.state import (
     DeerflowState,
     TickerData,

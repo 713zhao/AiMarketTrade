@@ -7,11 +7,7 @@ integrate correctly.
 
 import pytest
 import asyncio
-import sys
-from pathlib import Path
 from datetime import datetime
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from deerflow_openbb.state import DeerflowState, AnalystType
 from deerflow_openbb.graph import create_mock_graph
