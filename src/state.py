@@ -1078,7 +1078,7 @@ class DeerflowState(BaseModel):
     # Graph execution metadata
     active_nodes: List[str] = Field(default_factory=list)
     completed_nodes: List[str] = Field(default_factory=list)
-    errors: List[Dict[str, Any]] = Field(default_factory=dict)
+    errors: Dict[str, List[Dict[str, Any]]] = Field(default_factory=dict)
 
     # Cache and performance
     execution_time: Optional[float] = Field(None, description="Total execution time in seconds")

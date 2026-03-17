@@ -70,7 +70,7 @@ class TestEfficientFrontierNode:
                 "TSLA": ConsensusSignal(
                     ticker="TSLA",
                     overall_signal=SignalType.SELL,
-                    signal_strength=-0.5,
+                    signal_strength=0.3,
                     confidence=0.70
                 ),
                 "NVDA": ConsensusSignal(

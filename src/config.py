@@ -4,9 +4,10 @@ Loads environment variables with validation and defaults.
 """
 
 from typing import Optional, List
-from pydantic_settings import BaseSettings
-from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, field_validator, ConfigDict
 import os
+import json
 
 
 class Settings(BaseSettings):
@@ -29,15 +30,20 @@ class Settings(BaseSettings):
     log_level: str = Field("INFO", alias="LOG_LEVEL")
 
     # Trading Configuration
-    default_tickers: List[str] = Field(["AAPL", "MSFT", "GOOGL"], alias="DEFAULT_TICKERS")
+    default_tickers: List[str] = Field(
+        default=["AAPL", "MSFT", "GOOGL"], 
+        alias="DEFAULT_TICKERS",
+        description="Default tickers to analyze (comma-separated or JSON list)"
+    )
     time_horizon: str = Field("MEDIUM", alias="TIME_HORIZON")
     risk_tolerance: str = Field("MODERATE", alias="RISK_TOLERANCE")
     max_position_size: float = Field(5.0, alias="MAX_POSITION_SIZE")
 
-    # Data provider priority (comma-separated)
+    # Data provider priority (comma-separated or JSON list)
     data_provider_priority: List[str] = Field(
-        ["fmp", "polygon", "yahoo", "alpha_vantage"],
-        alias="DATA_PROVIDER_PRIORITY"
+        default=["fmp", "polygon", "yahoo", "alpha_vantage"],
+        alias="DATA_PROVIDER_PRIORITY",
+        description="Data provider priority (comma-separated or JSON list)"
     )
 
     # Analysis Configuration
@@ -51,12 +57,49 @@ class Settings(BaseSettings):
     max_parallel_analysts: int = Field(3, description="Maximum concurrent analyst nodes")
     graph_checkpoint_dir: str = Field("./checkpoints", description="Directory for graph checkpoints")
 
-    model_config = {
-        "env_file": ".env",
-        "env_nested_delimiter": "__",
-        "case_sensitive": False,
-        "extra": "allow"
-    }
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_nested_delimiter="__",
+        case_sensitive=False,
+        extra="allow",
+        env_ignore_empty=True,  # Ignore empty string environment variables
+    )
+
+    def __init__(self, **data):
+        """Initialize with better error handling for environment variables."""
+        # Process list-type environment variables to ensure they're in JSON format
+        env_list_fields = {
+            "DEFAULT_TICKERS": "default_tickers",
+            "DATA_PROVIDER_PRIORITY": "data_provider_priority", 
+            "TECHNICAL_INDICATORS": "technical_indicators",
+        }
+        
+        for env_var, _ in env_list_fields.items():
+            if env_var in os.environ:
+                val = os.environ[env_var].strip()
+                
+                # Skip empty values
+                if not val:
+                    del os.environ[env_var]
+                    continue
+                    
+                # If it doesn't start with [ or {, assume it's comma-separated and convert
+                if val and not val.startswith(("[", "{")):
+                    # Convert comma-separated to JSON array
+                    items = [item.strip() for item in val.split(",") if item.strip()]
+                    os.environ[env_var] = json.dumps(items)
+        
+        try:
+            super().__init__(**data)
+        except Exception as e:
+            # If it still fails, remove problematic env vars and try again
+            for env_var in env_list_fields:
+                if env_var in os.environ:
+                    del os.environ[env_var]
+            try:
+                super().__init__(**data)
+            except Exception:
+                raise e  # Re-raise original error
 
     @field_validator("log_level")
     @classmethod
@@ -67,6 +110,63 @@ class Settings(BaseSettings):
         if v_upper not in valid_levels:
             raise ValueError(f"log_level must be one of {valid_levels}")
         return v_upper
+
+    @field_validator("default_tickers", mode="before")
+    @classmethod
+    def parse_default_tickers(cls, v) -> List[str]:
+        """Parse default_tickers from various formats."""
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            if not v.strip():
+                return []
+            # Try JSON format first
+            if v.strip().startswith("["):
+                try:
+                    return json.loads(v)
+                except json.JSONDecodeError:
+                    pass
+            # Try comma-separated format
+            return [t.strip() for t in v.split(",") if t.strip()]
+        return v
+
+    @field_validator("data_provider_priority", mode="before")
+    @classmethod
+    def parse_data_provider_priority(cls, v) -> List[str]:
+        """Parse data_provider_priority from various formats."""
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            if not v.strip():
+                return ["yahoo"]
+            # Try JSON format first
+            if v.strip().startswith("["):
+                try:
+                    return json.loads(v)
+                except json.JSONDecodeError:
+                    pass
+            # Try comma-separated format
+            return [p.strip() for p in v.split(",") if p.strip()]
+        return v
+
+    @field_validator("technical_indicators", mode="before")
+    @classmethod
+    def parse_technical_indicators(cls, v) -> List[str]:
+        """Parse technical_indicators from various formats."""
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            if not v.strip():
+                return []
+            # Try JSON format first
+            if v.strip().startswith("["):
+                try:
+                    return json.loads(v)
+                except json.JSONDecodeError:
+                    pass
+            # Try comma-separated format
+            return [i.strip() for i in v.split(",") if i.strip()]
+        return v
 
     @field_validator("time_horizon")
     @classmethod
@@ -88,16 +188,30 @@ class Settings(BaseSettings):
             raise ValueError(f"risk_tolerance must be one of {valid_risks}")
         return v_upper
 
+    def _is_valid_api_key(self, key: Optional[str]) -> bool:
+        """Check if an API key is valid (not empty or a placeholder)."""
+        if not key:
+            return False
+        key_lower = key.lower().strip()
+        # Only filter out typical placeholder patterns from .env template
+        # Pattern: "your_*_here" or just "your_*"
+        if key_lower.startswith("your_") or key_lower.endswith("_here"):
+            return False
+        # Exclude common template values
+        if key_lower in {"placeholder", "example", "none", "null", "xxx", "yyy", "zzz"}:
+            return False
+        return True
+
     def get_available_data_providers(self) -> List[str]:
         """Get list of data providers with valid API keys."""
         providers = []
-        if self.fmp_api_key:
+        if self._is_valid_api_key(self.fmp_api_key):
             providers.append("fmp")
-        if self.polygon_api_key:
+        if self._is_valid_api_key(self.polygon_api_key):
             providers.append("polygon")
-        if self.alpha_vantage_api_key:
+        if self._is_valid_api_key(self.alpha_vantage_api_key):
             providers.append("alpha_vantage")
-        if self.eodhd_api_key:
+        if self._is_valid_api_key(self.eodhd_api_key):
             providers.append("eodhd")
         # Yahoo Finance is always available (free)
         providers.append("yahoo")

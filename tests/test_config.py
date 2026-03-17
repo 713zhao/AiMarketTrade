@@ -82,9 +82,14 @@ def test_primary_data_provider():
     """Test primary data provider selection."""
     import os
 
-    # Start clean
-    if "FMP_API_KEY" in os.environ: del os.environ["FMP_API_KEY"]
-    if "POLYGON_API_KEY" in os.environ: del os.environ["POLYGON_API_KEY"]
+    # Start clean - remove ALL API keys from environment
+    api_keys = [
+        "FMP_API_KEY", "POLYGON_API_KEY", "ALPHA_VANTAGE_API_KEY", 
+        "EODHD_API_KEY", "BENZINGA_API_KEY"
+    ]
+    for key in api_keys:
+        if key in os.environ:
+            del os.environ[key]
 
     settings = Settings()
     # Should default to yahoo when no paid providers
@@ -95,14 +100,16 @@ def test_primary_data_provider():
     settings = Settings()
     assert settings.get_primary_data_provider() == "fmp"
 
-    # Add both FMP and Polygon, Polygon in priority list
+    # Add both FMP and Polygon, FMP has higher priority
     os.environ["POLYGON_API_KEY"] = "test_polygon_key"
     settings = Settings()
-    # Polygon is higher priority than FMP based on default priority list
-    assert settings.get_primary_data_provider() == "polygon"
+    # FMP is higher priority than Polygon based on default priority list
+    assert settings.get_primary_data_provider() == "fmp"
 
-    del os.environ["FMP_API_KEY"]
-    del os.environ["POLYGON_API_KEY"]
+    # Clean up
+    for key in api_keys:
+        if key in os.environ:
+            del os.environ[key]
 
 
 def test_settings_singleton():

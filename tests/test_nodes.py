@@ -129,7 +129,7 @@ class TestTechnicalAnalystNode:
 
         return TickerData(
             ticker="AAPL",
-            provider=DataProvider.MOCK,
+            provider=DataProvider.YAHOO,
             historical_data={
                 'date': dates.strftime('%Y-%m-%d').tolist(),
                 'open': (prices * (1 + np.random.uniform(-0.005, 0.005, n))).tolist(),
@@ -369,7 +369,7 @@ class TestDecisionNode:
         # Add ticker data
         state.ticker_data["AAPL"] = TickerData(
             ticker="AAPL",
-            provider=DataProvider.MOCK,
+            provider=DataProvider.YAHOO,
             historical_data={
                 'close': [100.0] * 300,
             }
@@ -404,7 +404,7 @@ class TestDecisionNode:
         state.technical_analyses["AAPL"] = tech
         state.ticker_data["AAPL"] = TickerData(
             ticker="AAPL",
-            provider=DataProvider.MOCK,
+            provider=DataProvider.YAHOO,
             historical_data={'close': [100.0] * 300}
         )
 
@@ -432,7 +432,7 @@ class TestDecisionNode:
         state.technical_analyses["AAPL"] = tech
         state.ticker_data["AAPL"] = TickerData(
             ticker="AAPL",
-            provider=DataProvider.MOCK,
+            provider=DataProvider.YAHOO,
             historical_data={'close': [100.0] * 300}
         )
 

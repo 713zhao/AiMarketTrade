@@ -469,7 +469,7 @@ class MockStockDataNode(StockDataNode):
 
         return TickerData(
             ticker=ticker,
-            provider=DataProvider.MOCK,
+            provider=DataProvider.YAHOO,
             historical_data=mock_data,
             company_info={
                 "name": f"{ticker} Inc.",

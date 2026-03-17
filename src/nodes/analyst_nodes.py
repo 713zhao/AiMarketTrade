@@ -124,9 +124,9 @@ class TechnicalAnalystNode(BaseNode):
         indicators['EMA_26'] = close.ewm(span=26, adjust=False).mean().tolist()
         indicators['RSI_14'] = self._calculate_rsi(close).tolist()
 
-        macd_line = indicators['EMA_12'] - indicators['EMA_26']
+        macd_line = (pd.Series(indicators['EMA_12']) - pd.Series(indicators['EMA_26'])).tolist()
         signal_line = pd.Series(macd_line).ewm(span=9, adjust=False).mean().tolist()
-        indicators['MACD'] = macd_line.tolist()
+        indicators['MACD'] = macd_line
         indicators['MACD_SIGNAL'] = signal_line
         indicators['MACD_HIST'] = (pd.Series(macd_line) - pd.Series(signal_line)).tolist()
 
