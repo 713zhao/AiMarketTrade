@@ -10,6 +10,7 @@ from threading import Thread, Lock
 import time
 import json
 from pathlib import Path
+from src.market_config import Market, get_all_industries, is_market_open
 
 logger = logging.getLogger(__name__)
 
@@ -24,23 +25,46 @@ class BackgroundScanner:
         self.scan_results = {}  # {industry: [results]}
         self.last_scan_time = {}  # {industry: timestamp}
         self.scan_interval = 300  # 5 minutes in seconds
-        self.enabled_industries = ["AI", "Tech", "Power"]
+        self.market = Market.US  # Default market
+        self.enabled_industries = []  # Will be set dynamically by market
+        self.data_fetcher = None  # Will be set by start()
         
         # Set up results directory
         self.results_dir = Path("scan_results")
         self.results_dir.mkdir(exist_ok=True)
     
-    def start(self, data_fetcher):
-        """Start the background scanner"""
+    def start(self, data_fetcher, market: Market = Market.US):
+        """
+        Start the background scanner
+        
+        Args:
+            data_fetcher: DataFetcher instance for scanning
+            market: Market to scan (default: Market.US)
+        """
         if self.is_running:
-            logger.warning("Scanner already running")
+            logger.warning(f"Scanner already running. Updating market to {market.value}")
+            # Allow updating market even if already running
+            self.market = market
+            self.enabled_industries = get_all_industries(market)
+            if data_fetcher:
+                self.data_fetcher = data_fetcher
             return
         
+        # Initialize scanner
+        self.market = market
+        self.enabled_industries = get_all_industries(market)
         self.is_running = True
         self.data_fetcher = data_fetcher
+        
+        logger.info(f"Initializing background scanner:")
+        logger.info(f"  Market: {market.value}")
+        logger.info(f"  Industries: {', '.join(self.enabled_industries)}")
+        logger.info(f"  Data Fetcher: {type(data_fetcher).__name__}")
+        
+        # Start scanner thread
         self.thread = Thread(target=self._scan_loop, daemon=True)
         self.thread.start()
-        logger.info("Background scanner started")
+        logger.info(f"✓ Background scanner thread started")
     
     def stop(self):
         """Stop the background scanner"""
@@ -53,6 +77,20 @@ class BackgroundScanner:
         """Main scan loop running in background thread"""
         while self.is_running:
             try:
+                # Verify data_fetcher is available
+                if not self.data_fetcher:
+                    logger.warning("Data fetcher not initialized. Waiting for setup...")
+                    time.sleep(10)
+                    continue
+                
+                # Check if market is open
+                if not is_market_open(self.market):
+                    logger.debug(f"Market {self.market.value} is closed. Scanning will resume during market hours.")
+                    # Check every minute if market opened
+                    time.sleep(60)
+                    continue
+                
+                # Market is open - perform scans
                 for industry in self.enabled_industries:
                     self._scan_industry(industry)
                 
@@ -105,23 +143,30 @@ class BackgroundScanner:
     def _scan_industry(self, industry: str):
         """Scan a single industry"""
         try:
-            logger.info(f"\n🚀 Starting scan for {industry}...")
-            results = self.data_fetcher.scan_industry(industry)
+            # Verify data_fetcher is available
+            if not self.data_fetcher:
+                logger.error(f"Cannot scan {industry}: data_fetcher not initialized")
+                return
+            
+            logger.info(f"\n🚀 Starting scan for {industry} ({self.market.value} market)...")
+            
+            # Call scan_industry with explicit market parameter
+            results = self.data_fetcher.scan_industry(industry, self.market)
+            
+            if not results:
+                logger.warning(f"No results returned for {industry}")
+                results = []
             
             with self.lock:
                 self.scan_results[industry] = results
                 self.last_scan_time[industry] = datetime.now().isoformat()
             
-            # Save to file
+            # Save to file for persistence
             self._save_results_to_file(industry, results)
             
             # Format and print markdown table
             table = self._format_as_markdown_table(industry, results)
             logger.info("\n" + table)
-            
-            with self.lock:
-                self.scan_results[industry] = results
-                self.last_scan_time[industry] = datetime.now().isoformat()
             
             # Summary statistics
             buy_count = len([r for r in results if r.get("recommendation") == "BUY"])
@@ -136,6 +181,8 @@ class BackgroundScanner:
             
         except Exception as e:
             logger.error(f"✗ Error scanning {industry}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
     
     def get_results(self, industry: Optional[str] = None) -> Dict:
         """Get scan results"""
@@ -166,6 +213,17 @@ class BackgroundScanner:
         
         return sorted(filtered, key=lambda x: x.get("buy_score" if signal_type == "BUY" else "sell_score", 0), reverse=True)
     
+    def get_all_results(self, industry: str) -> List[Dict]:
+        """Get ALL scan results for an industry without any filtering"""
+        with self.lock:
+            results = self.scan_results.get(industry, [])
+        
+        # If no results in memory, try loading from file
+        if not results:
+            results = self.load_results_from_file(industry) or []
+        
+        return results
+    
     def set_results(self, industry: str, results: List[Dict]):
         """Manually set scan results for an industry (used by web API for immediate results)"""
         with self.lock:
@@ -174,7 +232,6 @@ class BackgroundScanner:
         
         # Save to file
         self._save_results_to_file(industry, results)
-        
         # Print formatted table
         table = self._format_as_markdown_table(industry, results)
         logger.info("\n" + table)

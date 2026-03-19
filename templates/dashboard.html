@@ -524,6 +524,39 @@
                 <div id="scanner-content" style="background: white; border-radius: 12px; padding: 1.5rem; min-height: 400px;">
                     <div class="loading">Starting scanner, please wait...</div>
                 </div>
+                
+                <!-- PERSISTENT LAST SCAN RESULTS SECTION (NEVER DISAPPEARS) -->
+                <div style="margin-top: 2rem; background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                    <h3 style="font-size: 1.25rem; margin-bottom: 1.5rem; color: #2c3e50; border-bottom: 2px solid #667eea; padding-bottom: 0.5rem;">📊 Last Scan Results</h3>
+                    <div id="last-scan-results" style="display: grid; gap: 1rem;">
+                        <div style="color: #7f8c8d; text-align: center; padding: 2rem;">No scan results yet. Click "Scan Now" to begin.</div>
+                    </div>
+                </div>
+                
+                <!-- Persistent Summary Section (Always Visible at Bottom) -->
+                <div style="margin-top: 2rem; background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                    <h3 style="font-size: 1.25rem; margin-bottom: 1.5rem; color: #2c3e50; border-bottom: 2px solid #667eea; padding-bottom: 0.5rem;">Last Scan Summary</h3>
+                    <div id="scanner-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+                        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #667eea;">
+                            <div style="font-size: 0.875rem; color: #7f8c8d; margin-bottom: 0.5rem;">STATUS</div>
+                            <div id="summary-status" style="font-size: 1.5rem; font-weight: 700; color: #2c3e50;">--</div>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #27ae60;">
+                            <div style="font-size: 0.875rem; color: #7f8c8d; margin-bottom: 0.5rem;">TOTAL BUY SIGNALS</div>
+                            <div id="summary-buy-count" style="font-size: 1.5rem; font-weight: 700; color: #27ae60;">0</div>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #e74c3c;">
+                            <div style="font-size: 0.875rem; color: #7f8c8d; margin-bottom: 0.5rem;">TOTAL SELL SIGNALS</div>
+                            <div id="summary-sell-count" style="font-size: 1.5rem; font-weight: 700; color: #e74c3c;">0</div>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #95a5a6;">
+                            <div style="font-size: 0.875rem; color: #7f8c8d; margin-bottom: 0.5rem;">INDUSTRIES SCANNED</div>
+                            <div id="summary-industries-count" style="font-size: 1.5rem; font-weight: 700; color: #2c3e50;">0</div>
+                        </div>
+                    </div>
+                    <div id="summary-last-update" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #dee2e6; font-size: 0.875rem; color: #7f8c8d;">
+                        Last updated: <span style="color: #2c3e50; font-weight: 600;">Never</span>
+                    </div>
             </div>
             
             <!-- Performance Tab -->
@@ -993,43 +1026,183 @@
                 }
                 html += '</div>';
                 
+                // Persistent last scan results HTML
+                let lastScanHtml = '';
+                
                 // Get recommendations for enabled industries
+                let totalBuyCount = 0;
+                let totalSellCount = 0;
+                const industryCount = status.enabled_industries.length;
+                
                 for (const industry of status.enabled_industries) {
                     try {
+                        // Fetch BUY recommendations for current content
                         const recResponse = await fetch(`/api/scanner/recommendations/${industry}?signal=BUY&min_score=2`);
                         const recData = await recResponse.json();
                         
-                        html += `<div style="margin-bottom: 1.5rem;">`;
-                        html += `<h3 style="color: green; margin-bottom: 1rem;">${industry} - Buy Opportunities (${recData.count})</h3>`;
+                        // Fetch ALL results for persistent last scan results
+                        const allResultsResponse = await fetch(`/api/scanner/all-results/${industry}`);
+                        if (!allResultsResponse.ok) {
+                            throw new Error(`Failed to fetch all results: ${allResultsResponse.status}`);
+                        }
+                        const allResultsData = await allResultsResponse.json();
+                        const allResults = allResultsData.results || [];
+                        
+                        // Log for debugging
+                        console.log(`[${industry}] Total results: ${allResults.length}`);
+                        const buyCount_ = allResults.filter(r => r.recommendation === 'BUY').length;
+                        const sellCount_ = allResults.filter(r => r.recommendation === 'SELL').length;
+                        const holdCount_ = allResults.filter(r => r.recommendation === 'HOLD').length;
+                        console.log(`[${industry}] Breakdown: ${buyCount_} BUY, ${sellCount_} SELL, ${holdCount_} HOLD`);
+                        
+                        // Count buy/sell signals
+                        const buyCount = recData.recommendations ? recData.recommendations.filter(r => r.recommendation === 'BUY').length : 0;
+                        const sellCount = recData.recommendations ? recData.recommendations.filter(r => r.recommendation === 'SELL').length : 0;
+                        
+                        totalBuyCount += buyCount;
+                        totalSellCount += sellCount;
+                        
+                        // Get timestamp for this industry
+                        const scanTime = status.last_scans[industry] ? new Date(status.last_scans[industry]).toLocaleTimeString() : 'N/A';
+                        
+                        // Create collapsible section for CURRENT CONTENT (BUY recommendations)
+                        const sectionId = `industry-${industry}`;
+                        html += `<div style="margin-bottom: 1rem;">`;
+                        html += `<button class="collapsible-btn" onclick="toggleCollapse('${sectionId}')" style="width: 100%; justify-content: space-between;">
+                            <span>${industry} - <strong style="color: #27ae60;">${buyCount} Buy</strong> / <strong style="color: #e74c3c;">${sellCount} Sell</strong> (${recData.count} total)</span>
+                            <span>▼</span>
+                        </button>`;
+                        
+                        html += `<div id="${sectionId}" class="collapsible-content">`;
+                        html += `<div class="collapsible-inner">`;
                         
                         if (recData.recommendations.length === 0) {
-                            html += '<p>No buy signals at the moment</p>';
+                            html += '<p style="color: #7f8c8d;">No recommendations at the moment</p>';
                         } else {
                             html += '<table style="width: 100%; border-collapse: collapse;">';
                             html += '<thead style="background: #f0f0f0;"><tr><th style="padding: 0.75rem; text-align: left;">Ticker</th><th>Price</th><th>RSI</th><th>Score</th><th>Signal</th></tr></thead>';
                             html += '<tbody>';
                             recData.recommendations.slice(0, 10).forEach(rec => {
+                                const signalBg = rec.recommendation === 'BUY' ? '#d4edda' : rec.recommendation === 'SELL' ? '#f8d7da' : '#e2e3e5';
+                                const signalColor = rec.recommendation === 'BUY' ? '#155724' : rec.recommendation === 'SELL' ? '#721c24' : '#383d41';
                                 html += `<tr style="border-bottom: 1px solid #ddd;">`;
                                 html += `<td style="padding: 0.75rem;"><strong>${rec.ticker}</strong></td>`;
                                 html += `<td>${formatCurrency(rec.price)}</td>`;
                                 html += `<td>${rec.rsi ? rec.rsi.toFixed(2) : 'N/A'}</td>`;
-                                html += `<td><span style="background: green; color: white; padding: 0.25rem 0.5rem; border-radius: 4px;">${rec.buy_score}</span></td>`;
-                                html += `<td>${rec.rsi_signal || 'NORMAL'}</td>`;
+                                html += `<td><span style="background: ${signalBg}; color: ${signalColor}; padding: 0.25rem 0.75rem; border-radius: 4px; font-weight: 600;">${rec.buy_score}</span></td>`;
+                                html += `<td><span style="background: ${signalBg}; color: ${signalColor}; padding: 0.25rem 0.75rem; border-radius: 4px; font-weight: 600;">${rec.recommendation}</span></td>`;
                                 html += `</tr>`;
                             });
                             html += '</tbody></table>';
                         }
-                        html += '</div>';
+                        html += '</div></div></div>';
+                        
+                        // Create collapsible section for PERSISTENT LAST SCAN RESULTS (ALL results)
+                        const persistentId = `last-scan-${industry}`;
+                        lastScanHtml += `<div style="margin-bottom: 1rem; background: white; border-radius: 8px; border: 1px solid #dee2e6;">`;
+                        lastScanHtml += `<button class="collapsible-btn" onclick="toggleCollapse('${persistentId}')" style="width: 100%; justify-content: space-between; border-radius: 8px 8px 0 0;">
+                            <span>📋 ${industry} Industry - ${scanTime}</span>
+                            <span>▲</span>
+                        </button>`;
+                        
+                        lastScanHtml += `<div id="${persistentId}" class="collapsible-content show">`;  // Default expanded
+                        lastScanHtml += `<div class="collapsible-inner">`;
+                        
+                        if (!allResults || allResults.length === 0) {
+                            lastScanHtml += '<p style="color: #7f8c8d;">No scan data available</p>';
+                        } else {
+                            lastScanHtml += '<table style="width: 100%; border-collapse: collapse;">';
+                            lastScanHtml += '<thead style="background: #f0f0f0;"><tr>';
+                            lastScanHtml += '<th style="padding: 0.75rem; text-align: left;">Ticker</th>';
+                            lastScanHtml += '<th style="padding: 0.75rem; text-align: left;">Price</th>';
+                            lastScanHtml += '<th style="padding: 0.75rem; text-align: left;">RSI</th>';
+                            lastScanHtml += '<th style="padding: 0.75rem; text-align: left;">Status</th>';
+                            lastScanHtml += '<th style="padding: 0.75rem; text-align: left;">Signal</th>';
+                            lastScanHtml += '<th style="padding: 0.75rem; text-align: left;">Reason</th>';
+                            lastScanHtml += '</tr></thead>';
+                            lastScanHtml += '<tbody>';
+                            
+                            allResults.forEach(rec => {
+                                const signalBg = rec.recommendation === 'BUY' ? '#d4edda' : rec.recommendation === 'SELL' ? '#f8d7da' : '#e2e3e5';
+                                const signalColor = rec.recommendation === 'BUY' ? '#155724' : rec.recommendation === 'SELL' ? '#721c24' : '#383d41';
+                                const rsiStatus = rec.rsi_status || rec.rsi_signal || 'N/A';
+                                
+                                // Build clean reason from reasons array or reason string
+                                let reason = '';
+                                if (rec.reasons && rec.reasons.length > 0) {
+                                    reason = rec.reasons.join(' | ');  // e.g., "RSI Oversold(+2) | MACD Buy(+2)"
+                                } else if (rec.reason) {
+                                    reason = rec.reason;
+                                } else if (rec.recommendation === 'BUY' && rec.buy_score > 0) {
+                                    reason = `BUY Signal (Score: ${rec.buy_score})`;
+                                } else if (rec.recommendation === 'SELL' && rec.sell_score > 0) {
+                                    reason = `SELL Signal (Score: ${rec.sell_score})`;
+                                } else {
+                                    reason = 'No Strong Signals';
+                                }
+                                
+                                lastScanHtml += `<tr style="border-bottom: 1px solid #ddd;">`;
+                                lastScanHtml += `<td style="padding: 0.75rem;"><strong>${rec.ticker}</strong></td>`;
+                                lastScanHtml += `<td style="padding: 0.75rem;">${formatCurrency(rec.price)}</td>`;
+                                lastScanHtml += `<td style="padding: 0.75rem;">${rec.rsi ? rec.rsi.toFixed(2) : 'N/A'}</td>`;
+                                lastScanHtml += `<td style="padding: 0.75rem; font-size: 0.875rem;">${rsiStatus}</td>`;
+                                lastScanHtml += `<td style="padding: 0.75rem;"><span style="background: ${signalBg}; color: ${signalColor}; padding: 0.25rem 0.75rem; border-radius: 4px; font-weight: 600;">${rec.recommendation}</span></td>`;
+                                lastScanHtml += `<td style="padding: 0.75rem; color: #495057; font-size: 0.875rem; word-break: break-word; max-width: 300px;">${reason}</td>`;
+                                lastScanHtml += `</tr>`;
+                            });
+                            lastScanHtml += '</tbody></table>';
+                        }
+                        lastScanHtml += '</div></div></div>';
                     } catch (e) {
-                        console.error(`Error loading recommendations for ${industry}:`, e);
+                        console.error(`Error loading results for ${industry}:`, e);
                     }
                 }
                 
                 content.innerHTML = html;
+                
+                // Update the persistent last scan results section
+                const lastScanResultsEl = document.getElementById('last-scan-results');
+                if (lastScanHtml) {
+                    lastScanResultsEl.innerHTML = lastScanHtml;
+                }
+                
+                // Update the persistent summary section at the bottom
+                updateScannerSummary(status, totalBuyCount, totalSellCount, industryCount);
             } catch (error) {
                 console.error('Error loading scanner results:', error);
                 document.getElementById('scanner-content').innerHTML = `<div class="error" style="background: #fff3cd; color: #856404; padding: 1rem; border-radius: 8px;">Error loading scanner results: ${error.message}</div>`;
             }
+        }
+        
+        // Update the persistent summary at the bottom
+        function updateScannerSummary(status, buyCount, sellCount, industryCount) {
+            try {
+                const statusEl = document.getElementById('summary-status');
+                const buyCountEl = document.getElementById('summary-buy-count');
+                const sellCountEl = document.getElementById('summary-sell-count');
+                const industriesCountEl = document.getElementById('summary-industries-count');
+                const lastUpdateEl = document.getElementById('summary-last-update');
+                
+                // Update summary cards
+                statusEl.textContent = status.running ? '🟢 RUNNING' : '🔴 STOPPED';
+                statusEl.style.color = status.running ? '#27ae60' : '#e74c3c';
+                
+                buyCountEl.textContent = buyCount;
+                sellCountEl.textContent = sellCount;
+                industriesCountEl.textContent = industryCount;
+                
+                // Update last update time
+                const now = new Date();
+                lastUpdateEl.innerHTML = `Last updated: <span style="color: #2c3e50; font-weight: 600;">${now.toLocaleTimeString()}</span>`;
+            } catch (e) {
+                console.error('Error updating summary:', e);
+            }
+        }
+        
+        // Toggle collapsible sections
+        function toggleCollapse(id) {
+            const element = document.getElementById(id);
+            element.classList.toggle('show');
         }
         
         async function updateIndustries() {
@@ -1044,6 +1217,7 @@
                 });
                 const data = await response.json();
                 console.log('Industries updated:', data);
+                loadScannerResults();  // Reload results after updating industries
             } catch (error) {
                 console.error('Error updating industries:', error);
             }

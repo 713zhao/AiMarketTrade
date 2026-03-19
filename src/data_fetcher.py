@@ -8,10 +8,11 @@ import logging
 from typing import Dict, List, Optional, Tuple
 import pandas as pd
 import numpy as np
+from src.market_config import Market, MARKET_INDUSTRY_TICKERS, MARKET_DEFAULT_TICKERS
 
 logger = logging.getLogger(__name__)
 
-# Mapping of industries to common tickers
+# Mapping of industries to common tickers (default US market for backward compatibility)
 INDUSTRY_TICKERS = {
     "AI": ["NVDA", "PLTR", "AI", "UPST", "NFLX", "GOOGL", "MSFT", "META"],
     "POWER": ["NEE", "DUK", "SO", "AEP", "EXC", "XEL", "ED"],
@@ -155,12 +156,26 @@ class DataFetcher:
             return None
     
     @staticmethod
-    def get_tickers_by_industry(industry: str) -> List[str]:
-        """Get list of tickers for a specific industry"""
-        return INDUSTRY_TICKERS.get(industry.upper(), [])
+    def get_tickers_by_industry(industry: str, market: Market = Market.US) -> List[str]:
+        """
+        Get list of tickers for a specific industry
+        
+        Args:
+            industry: Industry name (e.g., "AI", "Tech")
+            market: Market to get tickers from (default: Market.US)
+        
+        Returns:
+            List of tickers for the industry in the specified market
+        """
+        # Try to get from market config first
+        try:
+            return MARKET_INDUSTRY_TICKERS.get(market, {}).get(industry.upper(), [])
+        except:
+            # Fall back to INDUSTRY_TICKERS for backward compatibility
+            return INDUSTRY_TICKERS.get(industry.upper(), [])
     
     @staticmethod
-    def quick_scan_industry(industry: str, min_score: float = 3.0, max_candidates: int = 20) -> List[Dict]:
+    def quick_scan_industry(industry: str, min_score: float = 3.0, max_candidates: int = 20, market: Market = Market.US) -> List[Dict]:
         """
         STAGE 1: Quick technical screening - returns only candidates with strong signals
         
@@ -171,11 +186,12 @@ class DataFetcher:
             industry: Industry name (e.g., "AI", "Tech")
             min_score: Minimum quick score to pass through (default 3.0 out of 5)
             max_candidates: Maximum candidates to return (default 20)
+            market: Market to scan (default: Market.US)
         
         Returns:
             List of candidates passing the quick filter
         """
-        tickers = DataFetcher.get_tickers_by_industry(industry)
+        tickers = DataFetcher.get_tickers_by_industry(industry, market)
         candidates = []
         all_stocks = []  # Track all stocks for summary table
         
@@ -296,13 +312,22 @@ class DataFetcher:
         }
     
     @staticmethod
-    def scan_industry(industry: str) -> List[Dict]:
-        """Scan all tickers in an industry for trading signals"""
-        tickers = DataFetcher.get_tickers_by_industry(industry)
+    def scan_industry(industry: str, market: Market = Market.US) -> List[Dict]:
+        """
+        Scan all tickers in an industry for trading signals
+        
+        Args:
+            industry: Industry name (e.g., "AI", "Tech")
+            market: Market to scan (default: Market.US)
+        
+        Returns:
+            List of trading signals sorted by buy score
+        """
+        tickers = DataFetcher.get_tickers_by_industry(industry, market)
         results = []
         
         logger.info(f"\n{'='*80}")
-        logger.info(f"🔍 SCANNING {industry.upper()} INDUSTRY - {len(tickers)} stocks")
+        logger.info(f"🔍 SCANNING {industry.upper()} INDUSTRY ({market.value} MARKET) - {len(tickers)} stocks")
         logger.info(f"{'='*80}")
         
         for ticker in tickers:
@@ -324,16 +349,25 @@ class DataFetcher:
                 momentum = DataFetcher.calculate_momentum(ticker)
                 if momentum:
                     signals["rsi"], signals["rsi_signal"] = momentum
+                else:
+                    logger.debug(f"    ⚠ {ticker}: No momentum data")
                 
                 # Volume spike
                 volume_spike = DataFetcher.detect_volume_spike(ticker)
                 if volume_spike:
                     signals["volume_spike_ratio"], signals["has_volume_spike"] = volume_spike
+                else:
+                    logger.debug(f"    ⚠ {ticker}: No volume spike data")
                 
                 # MACD
                 macd = DataFetcher.calculate_macd(ticker)
                 if macd:
                     signals.update(macd)
+                else:
+                    logger.debug(f"    ⚠ {ticker}: No MACD data")
+                
+                # Log signal values for debugging
+                logger.debug(f"    📊 {ticker} signals: rsi_signal={signals.get('rsi_signal')}, has_volume_spike={signals.get('has_volume_spike')}, buy_signal={signals.get('buy_signal')}, sell_signal={signals.get('sell_signal')}")
                 
                 # Generate trading signal with debug output
                 buy_score = 0
@@ -362,8 +396,12 @@ class DataFetcher:
                 signals["sell_score"] = sell_score
                 signals["recommendation"] = "BUY" if buy_score > sell_score else "SELL" if sell_score > buy_score else "HOLD"
                 
-                # Log the decision
+                # Store reasons in signal
                 reason_str = " | ".join(reasons) if reasons else "No signals"
+                signals["reason"] = reason_str
+                signals["reasons"] = reasons  # Also store as list for detailed view
+                
+                # Log the decision
                 logger.info(f"  → {ticker}: {signals['recommendation']:4s} (Buy:{buy_score} Sell:{sell_score}) {reason_str}")
                 
                 results.append(signals)

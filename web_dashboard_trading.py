@@ -10,9 +10,11 @@ Integrates with the trading system to display:
 from flask import Flask, render_template, jsonify, request
 from decimal import Decimal
 from datetime import datetime, timedelta
+from pathlib import Path
 import json
 import logging
 import sys
+import threading
 
 # Set up logging before Flask
 log_handler = logging.StreamHandler(sys.stdout)
@@ -48,18 +50,24 @@ from src.nodes.trading_nodes import (
 from src.data_fetcher import DataFetcher
 from src.background_scanner import get_scanner
 from src.config import Settings
+from src.market_config import Market, get_market_tickers, get_all_industries
 import asyncio
 
 # Global trading state (simulated portfolio)
 trading_state = None
 data_fetcher = DataFetcher()
 background_scanner = get_scanner()
+current_market = Market.US  # Default market
 
 def initialize_trading_state():
-    """Initialize a sample trading state for demonstration."""
-    global trading_state
+    """Initialize a sample trading state for demonstration using market-specific tickers."""
+    global trading_state, current_market
+    
+    # Get tickers for current market
+    tickers = get_market_tickers(current_market)
+    
     trading_state = DeerflowState(
-        tickers=["AAPL", "MSFT", "GOOGL"],
+        tickers=tickers,
         trading_enabled=True,
         cash_balance=100000.0,
         positions={},
@@ -72,16 +80,105 @@ def initialize_trading_state():
             "commission_pct": 0.0001,
         },
     )
-    logger.info("Trading state initialized")
+    logger.info(f"Trading state initialized for {current_market.value} market with {len(tickers)} tickers: {tickers}")
     
-    # Start background scanner
-    background_scanner.start(data_fetcher)
-    logger.info("Background scanner started")
+    # Start background scanner in a separate thread (non-blocking) with market support
+    scanner_thread = threading.Thread(target=background_scanner.start, args=(data_fetcher, current_market), daemon=True)
+    scanner_thread.start()
+    logger.info("Background scanner started in background thread")
 
 @app.route('/')
 def index():
     """Main dashboard page."""
     return render_template('dashboard.html')
+
+@app.route('/api/market')
+def get_current_market():
+    """Get current market and available markets."""
+    return jsonify({
+        "current_market": current_market.value,
+        "available_markets": [m.value for m in Market],
+    })
+
+@app.route('/api/market/set/<market_name>', methods=['POST'])
+def set_market(market_name: str):
+    """Change trading market and update tickers."""
+    global current_market, trading_state, background_scanner
+    
+    try:
+        market = Market(market_name.upper())
+        current_market = market
+        
+        # Get default tickers for the market
+        tickers = get_market_tickers(market)
+        
+        # Update trading state with new market tickers
+        if trading_state:
+            trading_state.tickers = tickers
+            trading_state.ticker_data = {}
+            trading_state.positions = {}
+            trading_state.executed_trades = []
+            trading_state.consensus_signals = {}
+            trading_state.cash_balance = 100000.0  # Reset cash
+        
+        # Restart background scanner with new market
+        if background_scanner.is_running:
+            background_scanner.stop()
+        
+        background_scanner.market = market
+        background_scanner.enabled_industries = get_all_industries(market)
+        scanner_thread = threading.Thread(target=background_scanner.start, args=(data_fetcher, market), daemon=True)
+        scanner_thread.start()
+        
+        logger.info(f"Market switched to {market.value}: {', '.join(tickers)}")
+        logger.info(f"Background scanner restarted for {market.value} market")
+        
+        return jsonify({
+            "success": True,
+            "market": market.value,
+            "tickers": tickers,
+            "message": f"Switched to {market.value} market with {len(tickers)} tickers"
+        })
+    except ValueError:
+        return jsonify({
+            "error": f"Unknown market: {market_name}",
+            "available_markets": [m.value for m in Market]
+        }), 400
+    except Exception as e:
+        logger.error(f"Error setting market: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/market/industries')
+def get_market_industries():
+    """Get industries available for current market."""
+    try:
+        industries = get_all_industries(current_market)
+        return jsonify({
+            "market": current_market.value,
+            "industries": industries
+        })
+    except Exception as e:
+        logger.error(f"Error getting industries: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/market/tickers/<industry>')
+def get_market_tickers_for_industry(industry: str):
+    """Get tickers for an industry in current market."""
+    try:
+        tickers = get_market_tickers(current_market, industry)
+        if not tickers:
+            return jsonify({
+                "error": f"Industry '{industry}' not found in {current_market.value} market"
+            }), 404
+        
+        return jsonify({
+            "market": current_market.value,
+            "industry": industry,
+            "tickers": tickers
+        })
+    except Exception as e:
+        logger.error(f"Error getting tickers: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/portfolio')
 def get_portfolio():
@@ -325,6 +422,13 @@ def run_trading_cycle():
             },
             trading_config=trading_state.trading_config,
         )
+        
+        logger.info(f"\n{'='*60}")
+        logger.info(f"Trading Cycle: {action} signal for {ticker}")
+        logger.info(f"Signal Strength: {confidence}")
+        logger.info(f"Confidence Threshold: {trading_state.trading_config.get('confidence_threshold', 0.50)}")
+        logger.info(f"Cash Available: ${trading_state.cash_balance:.2f}")
+        logger.info(f"{'='*60}")
 
         async def execute_cycle():
             # Step 1: Generate trade recommendation
@@ -584,6 +688,37 @@ def get_recommendations(industry):
         logger.error(f"Error getting recommendations for {industry}: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/scanner/all-results/<industry>')
+def get_all_results(industry):
+    """Get ALL scan results for an industry (no filtering)."""
+    try:
+        # Try to get from memory first, then fallback to file
+        results = background_scanner.get_all_results(industry)
+        
+        # If still empty, try loading from file directly
+        if not results:
+            file_path = Path("scan_results") / f"{industry}_scan.json"
+            if file_path.exists():
+                with open(file_path, 'r') as f:
+                    data = json.load(f)
+                    results = data.get("results", [])
+        
+        # Log what we're returning for debugging
+        buy_count = len([r for r in results if r.get("recommendation") == "BUY"])
+        sell_count = len([r for r in results if r.get("recommendation") == "SELL"])
+        hold_count = len([r for r in results if r.get("recommendation") == "HOLD"])
+        logger.info(f"Returning {len(results)} results for {industry}: {buy_count} BUY, {sell_count} SELL, {hold_count} HOLD")
+        
+        return jsonify({
+            "industry": industry,
+            "results": results,
+            "count": len(results),
+            "last_updated": background_scanner.last_scan_time.get(industry)
+        })
+    except Exception as e:
+        logger.error(f"Error getting all results for {industry}: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/scanner/scan-now/<industry>', methods=['POST'])
 def force_scan(industry):
     """
@@ -709,8 +844,22 @@ if __name__ == '__main__':
     print("=" * 60)
     print("Trading System Dashboard")
     print("=" * 60)
+    
+    # Suppress scanner debug output during startup
+    logging.getLogger('src.data_fetcher').setLevel(logging.CRITICAL)
+    logging.getLogger('src').setLevel(logging.CRITICAL)
+    
     initialize_trading_state()
     print("Trading State Initialized")
     print("Dashboard URL: http://localhost:5000")
     print("=" * 60)
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    print("Starting Flask server...")
+    sys.stdout.flush()
+    sys.stderr.flush()
+    
+    try:
+        app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=False, threaded=True)
+    except Exception as e:
+        print(f"ERROR starting Flask: {e}")
+        import traceback
+        traceback.print_exc()

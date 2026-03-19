@@ -1,5 +1,124 @@
 {
-  "industry": "Energy",
-  "timestamp": "2026-03-19T08:24:47.590907",
-  "results": []
+  "industry": "ENERGY",
+  "timestamp": "2026-03-20T01:34:16.550668",
+  "results": [
+    {
+      "ticker": "XOM",
+      "timestamp": "2026-03-20T01:34:11.694262",
+      "price": 158.26499938964844,
+      "volume": 15714914,
+      "market_cap": 659390332928,
+      "pe_ratio": 23.619404,
+      "rsi": 62.443343536601674,
+      "rsi_signal": "NEUTRAL",
+      "volume_spike_ratio": 0.7334364268005189,
+      "has_volume_spike": false,
+      "macd": 3.436173202855258,
+      "signal": 3.169876470623087,
+      "histogram": 0.266296732232171,
+      "buy_signal": false,
+      "sell_signal": false,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "CVX",
+      "timestamp": "2026-03-20T01:34:12.793421",
+      "price": 201.5500030517578,
+      "volume": 9736963,
+      "market_cap": 402949701632,
+      "pe_ratio": 30.398188,
+      "rsi": 75.04231945764954,
+      "rsi_signal": "OVERBOUGHT",
+      "volume_spike_ratio": 0.7717767540390539,
+      "has_volume_spike": false,
+      "macd": 5.448728723809694,
+      "signal": 4.863453076499028,
+      "histogram": 0.5852756473106657,
+      "buy_signal": false,
+      "sell_signal": false,
+      "buy_score": 0,
+      "sell_score": 2,
+      "recommendation": "SELL",
+      "reason": "RSI Overbought(+2)",
+      "reasons": [
+        "RSI Overbought(+2)"
+      ]
+    },
+    {
+      "ticker": "COP",
+      "timestamp": "2026-03-20T01:34:13.927273",
+      "price": 125.66999816894531,
+      "volume": 5668242,
+      "market_cap": 153611370496,
+      "pe_ratio": 19.759434,
+      "rsi": 74.48858084301646,
+      "rsi_signal": "OVERBOUGHT",
+      "volume_spike_ratio": 0.5518685805527258,
+      "has_volume_spike": false,
+      "macd": 4.289580030511559,
+      "signal": 3.808318153240018,
+      "histogram": 0.4812618772715407,
+      "buy_signal": false,
+      "sell_signal": false,
+      "buy_score": 0,
+      "sell_score": 2,
+      "recommendation": "SELL",
+      "reason": "RSI Overbought(+2)",
+      "reasons": [
+        "RSI Overbought(+2)"
+      ]
+    },
+    {
+      "ticker": "MPC",
+      "timestamp": "2026-03-20T01:34:15.054159",
+      "price": 237.8699951171875,
+      "volume": 2162066,
+      "market_cap": 71504306176,
+      "pe_ratio": 17.979591,
+      "rsi": 79.88243655798118,
+      "rsi_signal": "OVERBOUGHT",
+      "volume_spike_ratio": 0.7498557764269939,
+      "has_volume_spike": false,
+      "macd": 10.838127205990077,
+      "signal": 9.392693422219837,
+      "histogram": 1.4454337837702393,
+      "buy_signal": false,
+      "sell_signal": false,
+      "buy_score": 0,
+      "sell_score": 2,
+      "recommendation": "SELL",
+      "reason": "RSI Overbought(+2)",
+      "reasons": [
+        "RSI Overbought(+2)"
+      ]
+    },
+    {
+      "ticker": "PSX",
+      "timestamp": "2026-03-20T01:34:16.087623",
+      "price": 178.125,
+      "volume": 2357955,
+      "market_cap": 71382532096,
+      "pe_ratio": 16.493055,
+      "rsi": 82.40505271697413,
+      "rsi_signal": "OVERBOUGHT",
+      "volume_spike_ratio": 0.6696658784349365,
+      "has_volume_spike": false,
+      "macd": 6.1994020449333505,
+      "signal": 5.386681129361458,
+      "histogram": 0.8127209155718926,
+      "buy_signal": false,
+      "sell_signal": false,
+      "buy_score": 0,
+      "sell_score": 2,
+      "recommendation": "SELL",
+      "reason": "RSI Overbought(+2)",
+      "reasons": [
+        "RSI Overbought(+2)"
+      ]
+    }
+  ]
 }

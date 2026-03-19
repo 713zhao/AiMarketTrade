@@ -56,35 +56,47 @@ class RecommendationToTradeNode:
         
         # Process each consensus signal
         for ticker, signal in state.consensus_signals.items():
+            logger.info(f"\n📊 Evaluating {ticker}:")
+            logger.info(f"   Signal: {signal.overall_signal.value.upper()}")
+            logger.info(f"   Confidence: {signal.signal_strength:.2f}")
+            logger.info(f"   Threshold: {confidence_threshold:.2f}")
+            
             # Check confidence threshold
             if signal.signal_strength < confidence_threshold:
-                logger.debug(f"{ticker}: Skipped - confidence {signal.signal_strength} < {confidence_threshold}")
+                logger.warning(f"   ❌ REJECTED: Signal strength {signal.signal_strength:.2f} < threshold {confidence_threshold:.2f}")
                 continue
+            
+            logger.info(f"   ✓ Confidence check passed")
             
             # Skip HOLD signals
             if signal.overall_signal.value == "hold":
-                logger.debug(f"{ticker}: Skipped - HOLD signal")
+                logger.info(f"   ❌ SKIPPED: HOLD signal (no trade action)")
                 continue
             
             # Get current price from ticker data
             ticker_data = state.ticker_data.get(ticker)
             if not ticker_data or not ticker_data.historical_data:
-                logger.warning(f"{ticker}: No price data available")
+                logger.warning(f"   ❌ FAILED: No price data available")
                 continue
             
             prices = ticker_data.historical_data.get("close", [])
             if not prices or len(prices) == 0:
-                logger.warning(f"{ticker}: No closing prices available")
+                logger.warning(f"   ❌ FAILED: No closing prices in historical data")
                 continue
             
             current_price = float(prices[-1])
+            logger.info(f"   Price: ${current_price:.2f}")
             
             # Calculate trade size
             cash_to_trade = state.cash_balance * position_size_pct
             quantity = int(cash_to_trade / current_price)
             
+            logger.info(f"   Cash available: ${state.cash_balance:.2f}")
+            logger.info(f"   Position size (10%): ${cash_to_trade:.2f}")
+            logger.info(f"   Calculated qty: {quantity} shares")
+            
             if quantity == 0:
-                logger.debug(f"{ticker}: Quantity would be 0, skipping")
+                logger.warning(f"   ❌ FAILED: Calculated quantity is 0 (insufficient cash or price too high)")
                 continue
             
             # Determine action
@@ -101,7 +113,7 @@ class RecommendationToTradeNode:
             }
             
             pending_trades.append(trade)
-            logger.info(f"{ticker}: Generated {action.upper()} order for {quantity} shares @ ${current_price:.2f}")
+            logger.info(f"   ✅ APPROVED: Generated {action.upper()} order for {quantity} shares @ ${current_price:.2f}\n")
         
         # Update state
         state.pending_trades = pending_trades
