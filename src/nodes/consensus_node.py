@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime, timedelta
 import numpy as np
 
-from ..state import (
+from ..models import (
     DeerflowState, ConsensusSignal, TradingDecision, SignalType, AnalystType,
     TechnicalAnalysis, RiskAnalysis, TickerData,
 )
@@ -253,7 +253,7 @@ class DecisionNode(BaseNode):
         if action == SignalType.BUY:
             position_size = self.settings.max_position_size * consensus.consensus_confidence * signal_strength
         elif action == SignalType.SELL:
-            position_size = -min(self.settings.max_position_size * 0.5, 10.0)
+            position_size = 0.0  # Sell action with position_size=0 indicates no new position
         else:
             position_size = 0.0
 

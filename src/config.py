@@ -57,6 +57,96 @@ class Settings(BaseSettings):
     max_parallel_analysts: int = Field(3, description="Maximum concurrent analyst nodes")
     graph_checkpoint_dir: str = Field("./checkpoints", description="Directory for graph checkpoints")
 
+    # Virtual Trading Configuration
+    trading_enabled: bool = Field(
+        False,
+        alias="TRADING_ENABLED",
+        description="Enable virtual trading execution"
+    )
+    trading_initial_capital: float = Field(
+        100000.0,
+        alias="TRADING_INITIAL_CAPITAL",
+        description="Starting capital for virtual portfolio",
+        gt=0.0
+    )
+    trading_position_size_pct: float = Field(
+        0.10,
+        alias="TRADING_POSITION_SIZE_PCT",
+        description="Position size as % of portfolio per trade (0.0-1.0)",
+        ge=0.0,
+        le=1.0
+    )
+    trading_confidence_threshold: float = Field(
+        0.70,
+        alias="TRADING_CONFIDENCE_THRESHOLD",
+        description="Minimum signal confidence to execute trade",
+        ge=0.0,
+        le=1.0
+    )
+    trading_slippage_pct: float = Field(
+        0.001,
+        alias="TRADING_SLIPPAGE_PCT",
+        description="Slippage percentage per trade",
+        ge=0.0,
+        le=0.1
+    )
+    trading_commission_pct: float = Field(
+        0.0001,
+        alias="TRADING_COMMISSION_PCT",
+        description="Commission percentage per trade",
+        ge=0.0,
+        le=0.01
+    )
+
+    # Hybrid Scanning Configuration (Two-Stage Analysis)
+    hybrid_scan_enabled: bool = Field(
+        True,
+        alias="HYBRID_SCAN_ENABLED",
+        description="Enable two-stage hybrid scanning (quick filter + deep analysis)"
+    )
+    quick_scan_min_score: float = Field(
+        3.0,
+        alias="QUICK_SCAN_MIN_SCORE",
+        description="Minimum score to pass quick scan filter (out of 5)",
+        ge=0.0,
+        le=5.0
+    )
+    quick_scan_max_candidates: int = Field(
+        20,
+        alias="QUICK_SCAN_MAX_CANDIDATES",
+        description="Maximum candidates to analyze in deep phase",
+        ge=1
+    )
+    deep_analysis_min_score: float = Field(
+        6.5,
+        alias="DEEP_ANALYSIS_MIN_SCORE",
+        description="Minimum score to recommend from deep analysis (out of 10)",
+        ge=0.0,
+        le=10.0
+    )
+    deep_analysis_max_score_diff: float = Field(
+        2.0,
+        alias="DEEP_ANALYSIS_MAX_SCORE_DIFF",
+        description="Maximum allowed difference between quick and deep scores",
+        ge=0.0
+    )
+    deep_analysis_require_agreement: bool = Field(
+        True,
+        alias="DEEP_ANALYSIS_REQUIRE_AGREEMENT",
+        description="If true, quick and deep signals must match (BUY/SELL)",
+        alias_priority=True
+    )
+    quick_scan_timeout_secs: float = Field(
+        5.0,
+        alias="QUICK_SCAN_TIMEOUT_SECS",
+        description="Timeout for quick scan in seconds"
+    )
+    deep_analysis_timeout_secs: float = Field(
+        30.0,
+        alias="DEEP_ANALYSIS_TIMEOUT_SECS",
+        description="Timeout for deep analysis in seconds"
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_nested_delimiter="__",

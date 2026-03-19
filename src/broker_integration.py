@@ -302,7 +302,7 @@ class BrokerConnectorNode(BaseNode):
     node_type = "broker_connector"
     
     def __init__(self):
-        super().__init__()
+        super().__init__("broker_connector_node")
         self.adapters: Dict[str, BrokerAdapter] = {}
     
     async def execute(self, state: DeerflowState) -> NodeResult:
@@ -355,6 +355,9 @@ class TradeExecutorNode(BaseNode):
     """
     
     node_type = "trade_executor"
+    
+    def __init__(self):
+        super().__init__("trade_executor_node")
     
     async def execute(self, state: DeerflowState) -> NodeResult:
         """Execute trading plan through brokers."""
@@ -414,6 +417,9 @@ class OrderMonitorNode(BaseNode):
     """
     
     node_type = "order_monitor"
+    
+    def __init__(self):
+        super().__init__("order_monitor_node")
     
     async def execute(self, state: DeerflowState) -> NodeResult:
         """Monitor order fills and updates."""
@@ -484,6 +490,9 @@ class PositionManagerNode(BaseNode):
     
     node_type = "position_manager"
     
+    def __init__(self):
+        super().__init__("position_manager_node")
+    
     async def execute(self, state: DeerflowState) -> NodeResult:
         """Update positions from brokers."""
         try:
@@ -537,6 +546,9 @@ class AccountMonitorNode(BaseNode):
     
     node_type = "account_monitor"
     
+    def __init__(self):
+        super().__init__("account_monitor_node")
+    
     async def execute(self, state: DeerflowState) -> NodeResult:
         """Monitor account status across brokers."""
         try:
@@ -582,7 +594,7 @@ class RiskControlNode(BaseNode):
     node_type = "risk_control"
     
     def __init__(self):
-        super().__init__()
+        super().__init__("risk_control_node")
         self.max_position_size_pct = 0.10  # Max 10% of portfolio per position
         self.max_daily_loss_pct = -0.02     # Max -2% daily loss
         self.sector_concentration_limit = 0.30  # Max 30% in one sector
@@ -650,6 +662,9 @@ class ComplianceLoggerNode(BaseNode):
     """
     
     node_type = "compliance_logger"
+    
+    def __init__(self):
+        super().__init__("compliance_logger_node")
     
     async def execute(self, state: DeerflowState) -> NodeResult:
         """Log all executed trades for compliance."""

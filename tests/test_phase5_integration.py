@@ -14,8 +14,8 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import asyncio
 
-from deerflow_openbb.state import DeerflowState, AnalystType
-from deerflow_openbb.graph import (
+from src.models import DeerflowState, AnalystType
+from src.graph import (
     create_deerflow_graph,
     create_mock_graph,
     create_simplified_graph,
@@ -144,7 +144,7 @@ class TestPhase5StateFlow:
         state = DeerflowState(tickers=["AAPL"])
         
         # Update Phase 5 fields
-        from state import EfficientFrontierData, TransactionExecutionPlan, BacktestResult
+        from src.models import EfficientFrontierData, TransactionExecutionPlan, BacktestResult
         
         state.efficient_frontier_data = EfficientFrontierData(num_portfolios=50)
         state.transaction_execution_plan = TransactionExecutionPlan(execution_id="test_exec")
@@ -206,7 +206,7 @@ class TestPhase5E2EScenarios:
             tickers=tickers,
         )
         
-        assert len(state.tickers) == 12
+        assert len(state.tickers) == 13
 
     def test_scenario_growth_focused(self):
         """Test Phase 5 with growth-focused portfolio."""
@@ -244,7 +244,7 @@ class TestPhase5DataValidation:
 
     def test_efficient_frontier_data_validation(self):
         """Test EfficientFrontierData pydantic validation."""
-        from state import EfficientFrontierData
+        from src.models import EfficientFrontierData
         
         # Valid data
         frontier = EfficientFrontierData(
@@ -257,7 +257,7 @@ class TestPhase5DataValidation:
 
     def test_backtest_result_data_validation(self):
         """Test BacktestResult pydantic validation."""
-        from state import BacktestResult
+        from src.models import BacktestResult
         
         backtest = BacktestResult(
             backtest_id="test_001",
@@ -272,7 +272,7 @@ class TestPhase5DataValidation:
 
     def test_transaction_plan_validation(self):
         """Test TransactionExecutionPlan pydantic validation."""
-        from state import TransactionExecutionPlan
+        from src.models import TransactionExecutionPlan
         
         plan = TransactionExecutionPlan(
             execution_id="exec_001",
@@ -284,7 +284,7 @@ class TestPhase5DataValidation:
 
     def test_portfolio_snapshot_validation(self):
         """Test PortfolioSnapshot pydantic validation."""
-        from state import PortfolioSnapshot
+        from src.models import PortfolioSnapshot
         
         snapshot = PortfolioSnapshot(
             snapshot_id="snap_001",
@@ -308,7 +308,7 @@ class TestPhase5BackwardCompatibility:
 
     def test_state_preserves_phase4_fields(self):
         """Test that Phase 5 state preserves Phase 4 fields."""
-        from state import PortfolioRiskAnalysis, MultiScenarioAnalysis
+        from src.models import PortfolioRiskAnalysis, MultiScenarioAnalysis
         
         state = DeerflowState(tickers=["AAPL"])
         
@@ -336,8 +336,8 @@ class TestPhase5PerformanceCharacteristics:
         """Test that frontier generation completes in reasonable time."""
         import time
         
-        from nodes import EfficientFrontierNode
-        from state import DeerflowState, ConsensusSignal, SignalType
+        from src.nodes import EfficientFrontierNode
+        from src.models import DeerflowState, ConsensusSignal, SignalType
         
         node = EfficientFrontierNode()
         state = DeerflowState(
@@ -362,8 +362,8 @@ class TestPhase5PerformanceCharacteristics:
         """Test that backtesting completes efficiently."""
         import time
         
-        from nodes import BacktestingEngineNode
-        from state import DeerflowState, PortfolioOptimizationResult
+        from src.nodes import BacktestingEngineNode
+        from src.models import DeerflowState, PortfolioOptimizationResult
         
         node = BacktestingEngineNode()
         state = DeerflowState(
@@ -388,8 +388,8 @@ class TestPhase5Robustness:
     @pytest.mark.asyncio
     async def test_graph_handles_missing_consensus_signals(self):
         """Test graph with incomplete consensus signals."""
-        from nodes import EfficientFrontierNode
-        from state import DeerflowState
+        from src.nodes import EfficientFrontierNode
+        from src.models import DeerflowState
         
         node = EfficientFrontierNode()
         state = DeerflowState(
@@ -404,8 +404,8 @@ class TestPhase5Robustness:
     @pytest.mark.asyncio
     async def test_graph_handles_missing_risk_analyses(self):
         """Test graph with missing risk analyses."""
-        from nodes import TransactionCostNode
-        from state import DeerflowState, PortfolioOptimizationResult
+        from src.nodes import TransactionCostNode
+        from src.models import DeerflowState, PortfolioOptimizationResult
         
         node = TransactionCostNode()
         state = DeerflowState(
@@ -422,7 +422,7 @@ class TestPhase5Robustness:
 
     def test_state_serialization_with_phase5_fields(self):
         """Test that Phase 5 state can be serialized."""
-        from state import EfficientFrontierData, BacktestResult
+        from src.models import EfficientFrontierData, BacktestResult
         
         state = DeerflowState(
             tickers=["AAPL"],

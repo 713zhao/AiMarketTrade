@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Market Analysis & Trading Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            opacity: 0.9;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        .stat-value.positive {
+            color: #27ae60;
+        }
+        
+        .stat-value.negative {
+            color: #e74c3c;
+        }
+        
+        .section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 2rem;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #2c3e50;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+        
+        .collapsible-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            width: auto;
+        }
+        
+        .collapsible-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin: 0;
+        }
+        
+        .collapsible-content.show {
+            max-height: 2000px;
+            overflow: visible;
+        }
+        
+        .collapsible-inner {
+            padding: 1.5rem;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .badge-buy {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-sell {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #7f8c8d;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1rem;
+            color: #7f8c8d;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Tooltip styles */
+        .tooltip-cell {
+            position: relative;
+        }
+        
+        .tooltip-row {
+            cursor: help;
+        }
+        
+        .tooltip-row .tooltip-text {
+            visibility: hidden;
+            width: 400px;
+            background-color: #2c3e50;
+            color: #fff;
+            text-align: left;
+            border-radius: 8px;
+            padding: 12px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 100%;
+            left: 50%;
+            margin-left: -200px;
+            margin-bottom: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+        
+        .tooltip-row .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #2c3e50 transparent transparent transparent;
+        }
+        
+        .tooltip-row:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .tooltip-label {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+        
+        /* System status styles */
+        .market-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .market-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .market-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        .market-status {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        
+        .market-status.open {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .market-status.closed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .market-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .info-item {
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .info-label {
+            font-size: 0.75rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+        
+        .info-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .monitoring-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .monitoring-badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .monitoring-badge.paused {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .monitoring-badge.inactive {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Stock Market Analysis & Trading Dashboard</h1>
+        <p>Real-time portfolio monitoring and trade history</p>
+    </div>
+    
+    <div class="container">
+        <!-- Stats Overview -->
+        <div class="stats-grid" id="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Portfolio Value</div>
+                <div class="stat-value" id="portfolio-value">Loading...</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Cash Balance</div>
+                <div class="stat-value" id="cash-balance">Loading...</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total P&L</div>
+                <div class="stat-value" id="total-pnl">Loading...</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Return</div>
+                <div class="stat-value" id="total-return">Loading...</div>
+            </div>
+        </div>
+        
+        <!-- Main Content Tabs -->
+        <div class="section">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('positions')">Positions</button>
+                <button class="tab" onclick="showTab('trades')">Trade History</button>
+                <button class="tab" onclick="showTab('trading-control')">Execute Trade</button>
+                <button class="tab" onclick="showTab('scanner')">Scanner</button>
+                <button class="tab" onclick="showTab('performance')">Performance</button>
+                <button class="tab" onclick="showTab('reports')">Reports</button>
+                <button class="tab" onclick="showTab('system')">System Status</button>
+            </div>
+            
+            <!-- Positions Tab -->
+            <div id="positions-tab" class="tab-content active">
+                <h2 class="section-title">Open Positions</h2>
+                <div id="positions-content">
+                    <div class="loading">Loading positions...</div>
+                </div>
+            </div>
+            
+            <!-- Trades Tab -->
+            <div id="trades-tab" class="tab-content">
+                <h2 class="section-title">Recent Trades</h2>
+                <div id="trades-content">
+                    <div class="loading">Loading trades...</div>
+                </div>
+            </div>
+            
+            <!-- Trading Control Tab -->
+            <div id="trading-control-tab" class="tab-content">
+                <h2 class="section-title">Execute Trade</h2>
+                <div style="max-width: 600px; margin: 0 auto;">
+                    <div style="background: #f8f9fa; padding: 2rem; border-radius: 12px;">
+                        <form id="trade-form" onsubmit="executeManualTrade(event)">
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Ticker Symbol</label>
+                                <input type="text" id="trade-ticker" name="ticker" placeholder="e.g., AAPL" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;" required>
+                            </div>
+                            
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Action</label>
+                                <select id="trade-action" name="action" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;">
+                                    <option value="buy">Buy</option>
+                                    <option value="sell">Sell</option>
+                                </select>
+                            </div>
+                            
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Quantity</label>
+                                <input type="number" id="trade-quantity" name="quantity" min="1" placeholder="e.g., 10" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;" required>
+                            </div>
+                            
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Price per Share</label>
+                                <input type="number" id="trade-price" name="price" min="0.01" step="0.01" placeholder="e.g., 150.00" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;" required>
+                            </div>
+                            
+                            <button type="submit" style="width: 100%; background: #667eea; color: white; padding: 0.75rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem;">Execute Trade</button>
+                        </form>
+                        <div id="trade-message" style="margin-top: 1rem;"></div>
+                    </div>
+                    
+                    <div style="margin-top: 2rem;">
+                        <h3 style="margin-bottom: 1rem;">Run Trading Cycle</h3>
+                        <form id="cycle-form" onsubmit="runTradingCycle(event)" style="background: #f8f9fa; padding: 2rem; border-radius: 12px;">
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Ticker</label>
+                                <input type="text" id="cycle-ticker" name="ticker" placeholder="e.g., AAPL" value="AAPL" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;" required>
+                            </div>
+                            
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Action</label>
+                                <select id="cycle-action" name="action" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;">
+                                    <option value="BUY">Buy Signal</option>
+                                    <option value="SELL">Sell Signal</option>
+                                </select>
+                            </div>
+                            
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Signal Confidence (0-1)</label>
+                                <input type="number" id="cycle-confidence" name="confidence" min="0" max="1" step="0.05" value="0.85" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;" required>
+                            </div>
+                            
+                            <button type="submit" style="width: 100%; background: #764ba2; color: white; padding: 0.75rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem;">Run Trading Cycle (Recommendation → Execution → Metrics)</button>
+                        </form>
+                        <div id="cycle-message" style="margin-top: 1rem;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Scanner Tab -->
+            <div id="scanner-tab" class="tab-content">
+                <h2 class="section-title">Stock Scanner - Find Trading Opportunities</h2>
+                <div style="background: #f8f9fa; padding: 2rem; border-radius: 12px; margin-bottom: 2rem;">
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Industries to Scan:</label>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                            <label style="display: flex; align-items: center;"><input type="checkbox" value="AI" checked onchange="updateIndustries()"> AI</label>
+                            <label style="display: flex; align-items: center;"><input type="checkbox" value="Tech" checked onchange="updateIndustries()"> Tech</label>
+                            <label style="display: flex; align-items: center;"><input type="checkbox" value="Power" checked onchange="updateIndustries()"> Power</label>
+                            <label style="display: flex; align-items: center;"><input type="checkbox" value="Healthcare" onchange="updateIndustries()"> Healthcare</label>
+                            <label style="display: flex; align-items: center;"><input type="checkbox" value="Finance" onchange="updateIndustries()"> Finance</label>
+                            <label style="display: flex; align-items: center;"><input type="checkbox" value="Energy" onchange="updateIndustries()"> Energy</label>
+                        </div>
+                    </div>
+                    <button onclick="forceScanAll()" style="background: #667eea; color: white; padding: 0.75rem 2rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Scan Now</button>
+                    <span id="scanner-status" style="margin-left: 1rem; color: #666;"></span>
+                </div>
+                <div id="scanner-content" style="background: white; border-radius: 12px; padding: 1.5rem; min-height: 400px;">
+                    <div class="loading">Starting scanner, please wait...</div>
+                </div>
+            </div>
+            
+            <!-- Performance Tab -->
+            <div id="performance-tab" class="tab-content">
+                <h2 class="section-title">Performance Metrics</h2>
+                <div id="performance-content">
+                    <div class="loading">Loading performance...</div>
+                </div>
+            </div>
+            
+            <!-- Reports Tab -->
+            <div id="reports-tab" class="tab-content">
+                <h2 class="section-title">Analysis Reports</h2>
+                <div id="reports-content">
+                    <div class="loading">Loading reports...</div>
+                </div>
+            </div>
+            
+            <!-- System Status Tab -->
+            <div id="system-tab" class="tab-content">
+                <h2 class="section-title">Intraday Monitoring Status</h2>
+                <div id="system-content">
+                    <div class="loading">Loading system status...</div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 2rem;">
+            <button class="refresh-btn" onclick="loadAllData()">🔄 Refresh Data</button>
+        </div>
+    </div>
+    
+    <script>
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        // Format currency
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2
+            }).format(value);
+        }
+        
+        // Format percentage
+        function formatPercent(value) {
+            return value.toFixed(2) + '%';
+        }
+        
+        // Load portfolio data
+        async function loadPortfolio() {
+            try {
+                const response = await fetch('/api/portfolio');
+                const data = await response.json();
+                
+                document.getElementById('portfolio-value').textContent = formatCurrency(data.portfolio_value);
+                document.getElementById('cash-balance').textContent = formatCurrency(data.cash_balance);
+                
+                const pnlElement = document.getElementById('total-pnl');
+                pnlElement.textContent = formatCurrency(data.total_pnl);
+                pnlElement.className = 'stat-value ' + (data.total_pnl >= 0 ? 'positive' : 'negative');
+                
+                const returnElement = document.getElementById('total-return');
+                returnElement.textContent = formatPercent(data.total_return_pct);
+                returnElement.className = 'stat-value ' + (data.total_return_pct >= 0 ? 'positive' : 'negative');
+                
+                // Load positions
+                loadPositions(data.positions);
+            } catch (error) {
+                console.error('Error loading portfolio:', error);
+            }
+        }
+        
+        // Load positions
+        function loadPositions(positions) {
+            const content = document.getElementById('positions-content');
+            
+            if (positions.length === 0) {
+                content.innerHTML = '<p>No open positions</p>';
+                return;
+            }
+            
+            let html = '<table><thead><tr><th>Symbol</th><th>Stock Name</th><th>Quantity</th><th>Avg Cost</th><th>Current Value</th></tr></thead><tbody>';
+            
+            positions.forEach(pos => {
+                html += `
+                    <tr>
+                        <td><strong><a href="${pos.yahoo_url}" target="_blank" style="color: #2563eb; text-decoration: none;">${pos.symbol}</a></strong></td>
+                        <td>${pos.stock_name}</td>
+                        <td>${pos.quantity}</td>
+                        <td>${formatCurrency(pos.average_cost)}</td>
+                        <td>${formatCurrency(pos.current_value)}</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            content.innerHTML = html;
+        }
+        
+        // Load trades
+        async function loadTrades() {
+            try {
+                const response = await fetch('/api/trades?limit=50');
+                const data = await response.json();
+                const content = document.getElementById('trades-content');
+                
+                if (data.trades.length === 0) {
+                    content.innerHTML = '<p>No trades yet</p>';
+                    return;
+                }
+                
+                let html = '<table><thead><tr><th>Date/Time</th><th>Action</th><th>Symbol</th><th>Quantity</th><th>Price</th><th>Total</th><th>Commission</th><th>Slippage</th></tr></thead><tbody>';
+                
+                data.trades.forEach(trade => {
+                    const date = new Date(trade.timestamp);
+                    const rationale = trade.rationale || 'No rationale available';
+                    html += `
+                        <tr class="tooltip-row">
+                            <td class="tooltip-cell">
+                                ${date.toLocaleString()}
+                                <span class="tooltip-text">
+                                    <div class="tooltip-label">Trade Details:</div>
+                                    ${rationale}
+                                </span>
+                            </td>
+                            <td><span class="badge badge-${trade.action.toLowerCase()}">${trade.action}</span></td>
+                            <td><strong><a href="${trade.yahoo_url}" target="_blank" style="color: #2563eb; text-decoration: none;">${trade.symbol}</a></strong></td>
+                            <td>${trade.quantity}</td>
+                            <td>${formatCurrency(trade.price)}</td>
+                            <td>${formatCurrency(trade.total)}</td>
+                            <td>${formatCurrency(trade.commission)}</td>
+                            <td>${formatCurrency(trade.slippage)}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table>';
+                content.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading trades:', error);
+                document.getElementById('trades-content').innerHTML = '<div class="error">Error loading trades</div>';
+            }
+        }
+        
+        // Load performance
+        async function loadPerformance() {
+            try {
+                const response = await fetch('/api/performance');
+                const data = await response.json();
+                const content = document.getElementById('performance-content');
+                
+                let html = `
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Realized P&L</div>
+                            <div class="stat-value ${data.realized_pnl >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.realized_pnl)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Unrealized P&L</div>
+                            <div class="stat-value ${data.unrealized_pnl >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.unrealized_pnl)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Win Rate</div>
+                            <div class="stat-value">${formatPercent(data.win_rate)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Trades</div>
+                            <div class="stat-value">${data.total_trades}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Avg Profit/Win</div>
+                            <div class="stat-value positive">${formatCurrency(data.avg_profit_per_win)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Avg Loss/Loss</div>
+                            <div class="stat-value negative">${formatCurrency(data.avg_loss_per_loss)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Max Drawdown</div>
+                            <div class="stat-value negative">${formatPercent(data.max_drawdown)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Open Positions</div>
+                            <div class="stat-value">${data.total_positions}</div>
+                        </div>
+                    </div>
+                `;
+                
+                content.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading performance:', error);
+                document.getElementById('performance-content').innerHTML = '<div class="error">Error loading performance</div>';
+            }
+        }
+        
+        // Load reports
+        async function loadReports() {
+            try {
+                const response = await fetch('/api/reports');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                const content = document.getElementById('reports-content');
+                
+                if (!data.reports || data.reports.length === 0) {
+                    content.innerHTML = '<p>No reports available. Run scanner to generate reports.</p>';
+                    return;
+                }
+                
+                let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">';
+                
+                data.reports.forEach(report => {
+                    html += `
+                        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; background: #fafafa;">
+                            <h3 style="margin: 0 0 1rem 0; color: #667eea;">${report.industry}</h3>
+                            <p style="margin: 0.5rem 0;"><strong>Report ID:</strong> <code>${report.report_id}</code></p>
+                            <p style="margin: 0.5rem 0;"><strong>Stocks Analyzed:</strong> ${report.recommendations_count}</p>
+                            <p style="margin: 0.5rem 0;"><strong>Buy Signals:</strong> <span style="color: green; font-weight: bold;">${report.buy_opportunities}</span></p>
+                            <p style="margin: 0.5rem 0;"><strong>Sell Signals:</strong> <span style="color: red; font-weight: bold;">${report.sell_opportunities}</span></p>
+                            <p style="margin: 1rem 0 0 0; font-size: 0.85rem; color: #999;">Updated: ${new Date(report.generated_at).toLocaleString()}</p>
+                            ${report.top_buys && report.top_buys.length > 0 ? `
+                                <div style="margin-top: 1rem; background: #d4edda; padding: 1rem; border-radius: 6px;">
+                                    <strong style="color: #155724;">Top Buy Signals:</strong>
+                                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
+                                        ${report.top_buys.slice(0, 3).map(s => `<li>${s.ticker}: $${s.price.toFixed(2)} (Score: ${s.buy_score})</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                content.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading reports:', error);
+                document.getElementById('reports-content').innerHTML = `<div class="error" style="background: #fff3cd; color: #856404; padding: 1rem; border-radius: 8px;">Error loading reports: ${error.message}</div>`;
+            }
+        }
+
+        // Load system status
+        async function loadSystemStatus() {
+            try {
+                const response = await fetch('/api/monitoring-status');
+                const data = await response.json();
+                const content = document.getElementById('system-content');
+                
+                if (!data.enabled) {
+                    const message = data.message || 'Intraday monitoring is not enabled';
+                    content.innerHTML = `<p>${message}</p>`;
+                    return;
+                }
+                
+                if (data.error) {
+                    content.innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                    return;
+                }
+                
+                let html = '';
+                
+                data.regions.forEach(region => {
+                    if (region.error) {
+                        html += `
+                            <div class="market-card">
+                                <div class="market-header">
+                                    <div class="market-name">${region.region}</div>
+                                    <div class="error">Error: ${region.error}</div>
+                                </div>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    const marketStatusClass = region.is_market_open ? 'open' : 'closed';
+                    const marketStatusText = region.is_market_open ? '🟢 Market Open' : '🔴 Market Closed';
+                    
+                    let monitoringBadge = '';
+                    if (region.monitoring.is_paused) {
+                        monitoringBadge = '<span class="monitoring-badge paused">⏸ Paused</span>';
+                    } else if (region.monitoring.is_active) {
+                        monitoringBadge = '<span class="monitoring-badge active">✓ Active</span>';
+                    } else {
+                        monitoringBadge = '<span class="monitoring-badge inactive">○ Inactive</span>';
+                    }
+                    
+                    const lastCycle = region.monitoring.last_cycle_time 
+                        ? new Date(region.monitoring.last_cycle_time).toLocaleString()
+                        : 'Never';
+                    
+                    const nextCycle = region.monitoring.next_cycle_time 
+                        ? new Date(region.monitoring.next_cycle_time).toLocaleString()
+                        : 'Not scheduled';
+                    
+                    html += `
+                        <div class="market-card">
+                            <div class="market-header">
+                                <div class="market-name">${region.region}</div>
+                                <div class="market-status ${marketStatusClass}">${marketStatusText}</div>
+                            </div>
+                            
+                            <div class="market-info-grid">
+                                <div class="info-item">
+                                    <div class="info-label">Market Hours</div>
+                                    <div class="info-value">${region.market_hours.open} - ${region.market_hours.close}</div>
+                                    <div class="info-label" style="margin-top: 0.25rem;">${region.market_hours.timezone}</div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <div class="info-label">Monitoring Status</div>
+                                    <div class="info-value">${monitoringBadge}</div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <div class="info-label">Last Check</div>
+                                    <div class="info-value">${lastCycle}</div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <div class="info-label">Next Check</div>
+                                    <div class="info-value">${nextCycle}</div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <div class="info-label">Cycles Today</div>
+                                    <div class="info-value">${region.monitoring.total_cycles_today}</div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <div class="info-label">Consecutive Failures</div>
+                                    <div class="info-value">${region.monitoring.consecutive_failures}</div>
+                                </div>
+                            </div>
+                            
+                            ${region.monitoring.is_paused && region.monitoring.pause_reason ? `
+                                <div style="margin-top: 1rem; padding: 0.75rem; background: #fff3cd; border-radius: 8px; color: #856404;">
+                                    <strong>Paused:</strong> ${region.monitoring.pause_reason}
+                                    ${region.monitoring.pause_until ? `<br><strong>Until:</strong> ${new Date(region.monitoring.pause_until).toLocaleString()}` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                content.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading system status:', error);
+                document.getElementById('system-content').innerHTML = '<div class="error">Error loading system status. The system may still be initializing.</div>';
+            }
+        }
+        
+        // Load all data
+        function loadAllData() {
+            loadPortfolio();
+            loadTrades();
+            loadPerformance();
+            loadReports();
+            loadSystemStatus();
+            loadScannerResults();
+        }
+        
+        // Execute manual trade
+        async function executeManualTrade(event) {
+            event.preventDefault();
+            const ticker = document.getElementById('trade-ticker').value.toUpperCase();
+            const action = document.getElementById('trade-action').value;
+            const quantity = parseInt(document.getElementById('trade-quantity').value);
+            const price = parseFloat(document.getElementById('trade-price').value);
+            
+            const messageEl = document.getElementById('trade-message');
+            
+            try {
+                const response = await fetch('/api/execute-trade', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ticker, action, quantity, price})
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageEl.innerHTML = '<div style="background: #d4edda; color: #155724; padding: 1rem; border-radius: 8px;">' + data.message + '</div>';
+                    document.getElementById('trade-form').reset();
+                    setTimeout(() => {
+                        loadAllData();
+                        messageEl.innerHTML = '';
+                    }, 1500);
+                } else {
+                    messageEl.innerHTML = '<div style="background: #f8d7da; color: #721c24; padding: 1rem; border-radius: 8px;">Error: ' + (data.error || 'Unknown error') + '</div>';
+                }
+            } catch (error) {
+                messageEl.innerHTML = '<div style="background: #f8d7da; color: #721c24; padding: 1rem; border-radius: 8px;">Error: ' + error.message + '</div>';
+            }
+        }
+        
+        // Run trading cycle
+        async function runTradingCycle(event) {
+            event.preventDefault();
+            const ticker = document.getElementById('cycle-ticker').value.toUpperCase();
+            const action = document.getElementById('cycle-action').value;
+            const confidence = parseFloat(document.getElementById('cycle-confidence').value);
+            
+            const messageEl = document.getElementById('cycle-message');
+            messageEl.innerHTML = '<div class="loading">Running trading cycle...</div>';
+            
+            try {
+                const response = await fetch('/api/run-trading-cycle', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ticker, action, confidence})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    let content = `
+                        <div style="background: #d4edda; color: #155724; padding: 1rem; border-radius: 8px;">
+                            <strong>✓ Trading Cycle Completed</strong><br>
+                            Trades Executed: ${data.trades_executed}<br>
+                            Cash Remaining: ${formatCurrency(data.cash_remaining)}<br>
+                            <br><strong>Metrics:</strong><br>
+                            Portfolio Value: ${formatCurrency(data.metrics.total_value)}<br>
+                            Total P&L: ${formatCurrency(data.metrics.total_pnl)}<br>
+                            Win Rate: ${formatPercent(data.metrics.win_rate)}
+                        </div>
+                    `;
+                    messageEl.innerHTML = content;
+                    setTimeout(() => {
+                        loadAllData();
+                        messageEl.innerHTML = '';
+                    }, 2000);
+                } else {
+                    messageEl.innerHTML = '<div style="background: #fff3cd; color: #856404; padding: 1rem; border-radius: 8px;">⚠ ' + data.message + '</div>';
+                }
+            } catch (error) {
+                messageEl.innerHTML = '<div style="background: #f8d7da; color: #721c24; padding: 1rem; border-radius: 8px;">Error: ' + error.message + '</div>';
+            }
+        }
+        
+        // Scanner functions
+        async function loadScannerResults() {
+            try {
+                const response = await fetch('/api/scanner/status');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const status = await response.json();
+                const content = document.getElementById('scanner-content');
+                
+                let html = '<div style="background: #e7f3ff; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">';
+                html += `<strong>Scanner Status:</strong> ${status.running ? '🟢 Running' : '🔴 Stopped'}<br>`;
+                html += `<strong>Scan Interval:</strong> ${status.scan_interval} seconds<br>`;
+                html += `<strong>Last Scans:</strong><br>`;
+                for (const [industry, time] of Object.entries(status.last_scans)) {
+                    const lastTime = new Date(time);
+                    html += `&nbsp;&nbsp;${industry}: ${lastTime.toLocaleTimeString()}<br>`;
+                }
+                html += '</div>';
+                
+                // Get recommendations for enabled industries
+                for (const industry of status.enabled_industries) {
+                    try {
+                        const recResponse = await fetch(`/api/scanner/recommendations/${industry}?signal=BUY&min_score=2`);
+                        const recData = await recResponse.json();
+                        
+                        html += `<div style="margin-bottom: 1.5rem;">`;
+                        html += `<h3 style="color: green; margin-bottom: 1rem;">${industry} - Buy Opportunities (${recData.count})</h3>`;
+                        
+                        if (recData.recommendations.length === 0) {
+                            html += '<p>No buy signals at the moment</p>';
+                        } else {
+                            html += '<table style="width: 100%; border-collapse: collapse;">';
+                            html += '<thead style="background: #f0f0f0;"><tr><th style="padding: 0.75rem; text-align: left;">Ticker</th><th>Price</th><th>RSI</th><th>Score</th><th>Signal</th></tr></thead>';
+                            html += '<tbody>';
+                            recData.recommendations.slice(0, 10).forEach(rec => {
+                                html += `<tr style="border-bottom: 1px solid #ddd;">`;
+                                html += `<td style="padding: 0.75rem;"><strong>${rec.ticker}</strong></td>`;
+                                html += `<td>${formatCurrency(rec.price)}</td>`;
+                                html += `<td>${rec.rsi ? rec.rsi.toFixed(2) : 'N/A'}</td>`;
+                                html += `<td><span style="background: green; color: white; padding: 0.25rem 0.5rem; border-radius: 4px;">${rec.buy_score}</span></td>`;
+                                html += `<td>${rec.rsi_signal || 'NORMAL'}</td>`;
+                                html += `</tr>`;
+                            });
+                            html += '</tbody></table>';
+                        }
+                        html += '</div>';
+                    } catch (e) {
+                        console.error(`Error loading recommendations for ${industry}:`, e);
+                    }
+                }
+                
+                content.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading scanner results:', error);
+                document.getElementById('scanner-content').innerHTML = `<div class="error" style="background: #fff3cd; color: #856404; padding: 1rem; border-radius: 8px;">Error loading scanner results: ${error.message}</div>`;
+            }
+        }
+        
+        async function updateIndustries() {
+            const checkboxes = document.querySelectorAll('#scanner-tab input[type="checkbox"]');
+            const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+            
+            try {
+                const response = await fetch('/api/scanner/industries', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({industries: selected})
+                });
+                const data = await response.json();
+                console.log('Industries updated:', data);
+            } catch (error) {
+                console.error('Error updating industries:', error);
+            }
+        }
+        
+        async function forceScanAll() {
+            const checkboxes = document.querySelectorAll('#scanner-tab input[type="checkbox"]');
+            const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+            const statusEl = document.getElementById('scanner-status');
+            const contentEl = document.getElementById('scanner-content');
+            
+            statusEl.textContent = 'Scanning...';
+            contentEl.innerHTML = '<div class="loading">🚀 Starting two-stage hybrid scan...</div>';
+            
+            try {
+                for (const industry of selected) {
+                    contentEl.innerHTML = `<div class="loading">⚡ Quick scan for ${industry}... (Stage 1)</div>`;
+                    
+                    const response = await fetch(`/api/scanner/scan-now/${industry}`, {method: 'POST'});
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(data.error || `HTTP ${response.status}`);
+                    }
+                    
+                    // Show results with two-stage breakdown
+                    displayHybridScanResults(industry, data);
+                }
+                
+                statusEl.textContent = '✅ Scan complete!';
+                setTimeout(() => {
+                    statusEl.textContent = '';
+                }, 3000);
+            } catch (error) {
+                console.error('Error forcing scan:', error);
+                statusEl.textContent = '❌ Scan error: ' + error.message;
+                contentEl.innerHTML = `<div class="error" style="background: #f8d7da; color: #721c24; padding: 1rem; border-radius: 8px;">
+                    <strong>Error:</strong> ${error.message}
+                </div>`;
+            }
+        }
+        
+        function displayHybridScanResults(industry, scanData) {
+            const contentEl = document.getElementById('scanner-content');
+            const stages = scanData.stages || {};
+            const results = scanData.results || [];
+            const summaryTable = scanData.summary_table || [];
+            
+            let html = `<div style="background: #d4edda; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">`;
+            html += `<h3 style="margin-top: 0;">✅ ${industry} Scan Complete</h3>`;
+            html += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">`;
+            html += `<div>
+                <strong>⚡ Quick Scan (Filter Stage)</strong><br>
+                Time: ${stages.quick?.time_secs || 0}s<br>
+                Candidates: ${stages.quick?.candidates || 0}
+            </div>`;
+            html += `<div>
+                <strong>🧠 Deep Analysis (Validation Stage)</strong><br>
+                Time: ${stages.deep?.time_secs || 0}s<br>
+                Confirmed: ${stages.deep?.confirmed || 0}
+            </div>`;
+            html += `<div>
+                <strong>⏱️ Total Time</strong><br>
+                ${scanData.total_time_secs || 0}s<br>
+                <em style="color: #666;">${scanData.message.split(':')[1]?.trim() || ''}</em>
+            </div>`;
+            html += `</div>`;
+            html += `</div>`;
+            
+            // Collapsible summary table section - ALWAYS SHOW BUTTON
+            const collapsibleId = `summary-${industry}-${Date.now()}`;
+            const stockCount = summaryTable.length || 0;
+            html += `<button class="collapsible-btn" onclick="toggleCollapsible('${collapsibleId}', this)">
+                <span>📊 Show Summary Table (${stockCount} stocks scanned)</span>
+                <span style="font-size: 1.2rem;">▼</span>
+            </button>`;
+            
+            // Always create the collapsible content, even if empty
+            html += `<div id="${collapsibleId}" class="collapsible-content">`;
+            html += `<div class="collapsible-inner">`;
+            
+            if (summaryTable.length > 0) {
+                html += `<h3 style="color: #495057; margin-bottom: 1rem; margin-top: 0;">📊 ${industry.toUpperCase()} Industry - All Stocks Analyzed (${stockCount})</h3>`;
+                html += `<table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; font-size: 0.9rem;">`;
+                html += `<thead style="background: #495057; color: white;">`;
+                html += `<tr>
+                    <th style="padding: 0.75rem; text-align: left;">Ticker</th>
+                    <th style="padding: 0.75rem;">Price</th>
+                    <th style="padding: 0.75rem;">RSI</th>
+                    <th style="padding: 0.75rem;">Status</th>
+                    <th style="padding: 0.75rem;">Signal</th>
+                    <th style="padding: 0.75rem;">Reason</th>
+                </tr></thead>`;
+                html += `<tbody>`;
+                
+                summaryTable.forEach((stock, idx) => {
+                    const statusBg = stock.rsi_status === 'OVERSOLD' ? '#d4edda' : stock.rsi_status === 'OVERBOUGHT' ? '#f8d7da' : '#e2e3e5';
+                    const statusColor = stock.rsi_status === 'OVERSOLD' ? '#155724' : stock.rsi_status === 'OVERBOUGHT' ? '#721c24' : '#383d41';
+                    const signalBg = stock.quick_signal === 'BUY' ? '#cfe2ff' : stock.quick_signal === 'SELL' ? '#f8d7da' : '#e2e3e5';
+                    const signalColor = stock.quick_signal === 'BUY' ? '#084298' : stock.quick_signal === 'SELL' ? '#842029' : '#383d41';
+                    const passedFilter = stock.passed ? '✓ ' : '';
+                    const rowBg = idx % 2 === 0 ? '#ffffff' : '#f9f9f9';
+                    
+                    const priceStr = stock.price ? `$${parseFloat(stock.price).toFixed(2)}` : 'N/A';
+                    const rsiStr = stock.rsi !== null ? stock.rsi.toFixed(2) : 'N/A';
+                    const reasonStr = stock.reasons && stock.reasons.length > 0 ? stock.reasons.join(' | ') : 'No signals';
+                    
+                    html += `<tr style="background: ${rowBg}; border-bottom: 1px solid #dee2e6;">`;
+                    html += `<td style="padding: 0.75rem; font-weight: 600;">${passedFilter}<strong>${stock.ticker}</strong></td>`;
+                    html += `<td style="padding: 0.75rem; text-align: center;">${priceStr}</td>`;
+                    html += `<td style="padding: 0.75rem; text-align: center;">${rsiStr}</td>`;
+                    html += `<td style="padding: 0.75rem; text-align: center;">
+                        <span style="background: ${statusBg}; color: ${statusColor}; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">
+                            ${stock.rsi_status}
+                        </span>
+                    </td>`;
+                    html += `<td style="padding: 0.75rem; text-align: center;">
+                        <span style="background: ${signalBg}; color: ${signalColor}; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">
+                            ${stock.quick_signal}
+                        </span>
+                    </td>`;
+                    html += `<td style="padding: 0.75rem; font-size: 0.85rem;">${reasonStr}</td>`;
+                    html += `</tr>`;
+                });
+                
+                html += `</tbody></table>`;
+            } else {
+                html += `<div style="color: #999; padding: 1rem; font-style: italic;"><em>⏳ No summary data yet. The stocks will appear here when the industry is scanned.</em></div>`;
+            }
+            
+            html += `</div></div>`;
+            
+            // Display final confirmed results
+            if (results.length > 0) {
+                html += `<div style="margin-bottom: 1.5rem; margin-top: 2rem;">`;
+                html += `<h3 style="color: #155724; margin-bottom: 1rem;">🟢 High-Confidence Recommendations (${results.length})</h3>`;
+                html += `<table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">`;
+                html += `<thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">`;
+                html += `<tr>
+                    <th style="padding: 1rem; text-align: left;">Ticker</th>
+                    <th>Price</th>
+                    <th>Quick Score</th>
+                    <th>Deep Score</th>
+                    <th>Signal</th>
+                    <th>Action</th>
+                </tr></thead>`;
+                html += `<tbody>`;
+                
+                results.forEach(rec => {
+                    const signalBg = rec.signal === 'BUY' ? '#28a745' : rec.signal === 'SELL' ? '#dc3545' : '#ffc107';
+                    const signalText = rec.signal === 'BUY' ? '🟢 BUY' : rec.signal === 'SELL' ? '🔴 SELL' : '⚪ HOLD';
+                    html += `<tr style="border-bottom: 1px solid #eee; hover: background #f9f9f9;">`;
+                    html += `<td style="padding: 1rem;"><strong>${rec.ticker}</strong></td>`;
+                    html += `<td>$${parseFloat(rec.price).toFixed(2)}</td>`;
+                    html += `<td><span style="background: #e7f3ff; padding: 0.5rem 0.75rem; border-radius: 4px;">${rec.quick_score.toFixed(1)}/5</span></td>`;
+                    html += `<td><span style="background: #fff3cd; padding: 0.5rem 0.75rem; border-radius: 4px;">${rec.deep_score.toFixed(1)}/10</span></td>`;
+                    html += `<td><span style="background: ${signalBg}; color: white; padding: 0.5rem 0.75rem; border-radius: 4px; font-weight: 600;">${signalText}</span></td>`;
+                    html += `<td><button onclick="buySellStock('${rec.ticker}', '${rec.signal}')" style="background: ${signalBg}; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">${rec.signal}</button></td>`;
+                    html += `</tr>`;
+                });
+                
+                html += `</tbody></table>`;
+                html += `</div>`;
+            } else {
+                html += `<div style="background: #fff3cd; color: #856404; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; margin-top: 2rem;">
+                    No high-confidence signals found. Check back later or adjust filter thresholds.
+                </div>`;
+            }
+            
+            contentEl.innerHTML = html;
+        }
+        
+        function toggleCollapsible(id, btn) {
+            const contentEl = document.getElementById(id);
+            const arrow = btn.querySelector('span:last-child');
+            
+            if (contentEl.classList.contains('show')) {
+                contentEl.classList.remove('show');
+                arrow.textContent = '▼';
+            } else {
+                contentEl.classList.add('show');
+                arrow.textContent = '▲';
+            }
+        }
+        
+        // Load last scan results from saved data
+        async function loadLastScanResults() {
+            try {
+                const response = await fetch('/api/scanner/all-scan-tables');
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                const contentEl = document.getElementById('scanner-content');
+                
+                if (!contentEl) return;
+                
+                let html = '<div style="background: #e8f4f8; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">';
+                html += '<strong>📊 Last Scan Results</strong><br>';
+                html += '<em style="color: #666;">Click "Scan Now" to refresh, or view previous results below:</em>';
+                html += '</div>';
+                
+                // Create collapsible sections for each industry
+                for (const industry of data.industries) {
+                    const collapsibleId = `last-scan-${industry}-${Date.now()}`;
+                    const lastTime = data.last_updated[industry];
+                    const timeStr = lastTime ? new Date(lastTime).toLocaleTimeString() : 'Unknown';
+                    
+                    html += `<button class="collapsible-btn" onclick="toggleCollapsible('${collapsibleId}', this)">
+                        <span>📋 ${industry} Industry - ${timeStr}</span>
+                        <span style="font-size: 1.2rem;">▼</span>
+                    </button>`;
+                    
+                    html += `<div id="${collapsibleId}" class="collapsible-content">`;
+                    html += `<div class="collapsible-inner">`;
+                    
+                    // Try to get data from individual endpoint
+                    try {
+                        const tableResponse = await fetch(`/api/scanner/scan-tables/${industry}`);
+                        const tableData = await tableResponse.json();
+                        
+                        if (tableData.success && tableData.table) {
+                            // Display the markdown table as formatted HTML
+                            html += `<pre style="background: white; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem;">`;
+                            html += tableData.table.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            html += `</pre>`;
+                        } else {
+                            html += `<div style="color: #666; padding: 1rem;">No scan data available for ${industry}</div>`;
+                        }
+                    } catch (e) {
+                        html += `<div style="color: #666; padding: 1rem;">No scan data available for ${industry}</div>`;
+                    }
+                    
+                    html += `</div>`;
+                    html += `</div>`;
+                }
+                
+                contentEl.innerHTML = html;
+            } catch (error) {
+                console.log('Could not load last scan results:', error);
+            }
+        }
+        
+        function buySellStock(ticker, action) {
+            const price = prompt(`Enter price for ${action} ${ticker}:`);
+            if (price) {
+                executeTrade(ticker, action, parseFloat(price));
+            }
+        }
+        
+        // Initial load
+        loadAllData();
+        loadLastScanResults();  // Load previous scan results on page init
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadAllData, 30000);
+    </script>
+</body>
+</html>

@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.config import get_settings, reload_settings
 from src.graph import create_mock_graph, create_deerflow_graph, print_state_summary
-from src.state import DeerflowState
+from src.models import DeerflowState
 
 
 def parse_arguments():
@@ -50,7 +50,7 @@ Examples:
 
     # Tickers (positional or via flag)
     parser.add_argument(
-        'tickers',
+        'positional_tickers',
         nargs='*',
         help='Stock ticker symbols to analyze (e.g., AAPL MSFT GOOGL)'
     )
@@ -100,6 +100,25 @@ Examples:
         '--full-pipeline',
         action='store_true',
         help='Use all 6 analyst nodes (default in Phase 2)'
+    )
+
+    # Virtual trading
+    parser.add_argument(
+        '--trading',
+        action='store_true',
+        help='Enable virtual trading execution (simulated trades based on recommendations)'
+    )
+    parser.add_argument(
+        '--trading-initial-capital',
+        type=float,
+        default=None,
+        help='Initial capital for trading (default: $100,000 from config)'
+    )
+    parser.add_argument(
+        '--trading-position-size',
+        type=float,
+        default=None,
+        help='Position size % per trade (default: 10% from config)'
     )
 
     parser.add_argument(
@@ -224,7 +243,9 @@ async def main_async(args) -> int:
         tickers = []
         if args.tickers:
             tickers = [t.strip().upper() for t in args.tickers.split(',')]
-        elif not args.tickers:
+        elif args.positional_tickers:
+            tickers = [t.upper() for t in args.positional_tickers]
+        else:
             tickers = settings.default_tickers
             print(f"Using default tickers: {', '.join(tickers)}")
 
@@ -261,7 +282,7 @@ async def main_async(args) -> int:
                 graph = create_deerflow_graph()
 
         # Prepare initial state
-        from src.state import DeerflowState
+        from src.models import DeerflowState
         from uuid import uuid4
 
         initial_state = DeerflowState(
@@ -279,7 +300,7 @@ async def main_async(args) -> int:
         print("[Graph] Nodes: stock_data → [technical, fundamentals, news, growth, macro, risk] → consensus → decision")
         start_time = datetime.utcnow()
 
-        result = graph.invoke(initial_state, {
+        result = await graph.ainvoke(initial_state, {
             "configurable": {"thread_id": initial_state.session_id}
         })
 

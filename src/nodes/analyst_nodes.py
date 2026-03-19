@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional, List, Tuple
 import pandas as pd
 import numpy as np
 
-from ..state import (
+from ..models import (
     DeerflowState, TickerData, TechnicalAnalysis, AnalystType, SignalType,
     NewsAnalysis, FundamentalAnalysis, GrowthAnalysis, RiskAnalysis, MacroAnalysis,
 )

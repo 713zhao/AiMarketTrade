@@ -7,8 +7,19 @@ type-safe communication between agents and nodes.
 
 from datetime import datetime
 from typing import List, Optional, Dict, Any
+from typing_extensions import Annotated, TypedDict
 from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
+
+
+def _reduce_session_id(left: str | None, right: str | None) -> str | None:
+    """Reducer function for concurrent session_id updates in LandGraph.
+    
+    Returns the rightmost non-None/non-empty value, or left if right is empty.
+    """
+    if right and right.strip():
+        return right
+    return left if left else ""
 
 
 class AnalystType(str, Enum):
@@ -620,6 +631,19 @@ class PerformanceAttribution(BaseModel):
     idiosyncratic_return: float = Field(0.0, description="Unexplained return")
     signal_accuracy: float = Field(0.55, description="Accuracy  of trading signals")
     timing_effectiveness: float = Field(0.5, description="Effectiveness of trade timing")
+    
+    # Attribution decomposition
+    allocation_effect: float = Field(0.0, description="Return from allocation decisions")
+    selection_effect: float = Field(0.0, description="Return from security selection")
+    interaction_effect: float = Field(0.0, description="Combined allocation and selection effect")
+    portfolio_return: float = Field(0.0, description="Total portfolio return")
+    
+    # Top contributors and detractors
+    top_contributors: List[tuple] = Field(default_factory=list, description="Top contributing holdings")
+    top_detractors: List[tuple] = Field(default_factory=list, description="Top detracting holdings")
+    
+    # Holding-level attribution
+    holding_attribution: Dict[str, Dict[str, float]] = Field(default_factory=dict, description="Per-holding attribution analysis")
 
 
 class EfficientFrontierPoint(BaseModel):
@@ -1008,6 +1032,331 @@ class ComplianceRecord(BaseModel):
     error: Optional[str] = Field(None, description="Any error message")
 
 
+# ============================================================================
+# PHASE 7: Advanced Strategies & Derivatives Trading
+# ============================================================================
+
+class OptionContract(BaseModel):
+    """
+    Details for equity/index options contracts.
+    
+    期权合约细节，包括Greeks和定价数据。
+    """
+    contract_id: str = Field(description="Unique contract ID")
+    ticker: str = Field(description="Underlying symbol")
+    contract_type: str = Field(description="CALL or PUT")
+    expiration: datetime = Field(description="Expiration date")
+    strike: float = Field(description="Strike price", ge=0.0)
+    
+    # Pricing
+    bid: float = Field(0.0, description="Current bid price")
+    ask: float = Field(0.0, description="Current ask price")
+    last: float = Field(0.0, description="Last trade price")
+    volume: int = Field(0, description="Daily volume")
+    open_interest: int = Field(0, description="Total open contracts")
+    
+    # Greeks
+    implied_volatility: float = Field(0.25, description="IV as decimal (0.25 = 25%)", ge=0.0, le=3.0)
+    delta: float = Field(description="Delta (directional sensitivity)", ge=-1.0, le=1.0)
+    gamma: float = Field(0.0, description="Gamma (curvature)")
+    theta: float = Field(0.0, description="Theta (daily decay in $)")
+    vega: float = Field(0.0, description="Vega (IV sensitivity in $)")
+    rho: float = Field(0.0, description="Rho (interest rate sensitivity)")
+    
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    is_tradeable: bool = Field(True, description="Is option currently tradeable")
+
+
+class FuturesContract(BaseModel):
+    """
+    Futures contract specifications and quotes.
+    
+    期货合约规格和报价。
+    """
+    contract_id: str = Field(description="Unique contract ID")
+    symbol: str = Field(description="Futures symbol (ES, NQ, YM, GC, CL, etc)")
+    contract_code: str = Field(description="Full code (ESH24 = Mar 2024 E-mini S&P)")
+    expiration: datetime = Field(description="Last trading day")
+    multiplier: float = Field(50.0, description="Contract multiplier", gt=0.0)
+    
+    # Pricing
+    bid: float = Field(0.0, description="Current bid")
+    ask: float = Field(0.0, description="Current ask")
+    current_price: float = Field(0.0, description="Current mark price")
+    settlement_price: float = Field(0.0, description="Previous settlement")
+    
+    # Movement
+    daily_change: float = Field(0.0, description="Change today")
+    daily_change_pct: float = Field(0.0, description="% change today")
+    volume: int = Field(0, description="Daily volume")
+    open_interest: int = Field(0, description="Total open contracts")
+    bid_volume: int = Field(0, description="Bid size")
+    ask_volume: int = Field(0, description="Ask size")
+    
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    contract_type: str = Field("INDEX", description="INDEX, COMMODITY, FOREX, CRYPTO")
+    exchange: str = Field("CME", description="CME, ICE, CBOE, etc")
+
+
+class CryptoDerivative(BaseModel):
+    """
+    Cryptocurrency futures and perpetuals.
+    
+    加密货币期货和永续合约。
+    """
+    contract_id: str = Field(description="Unique ID")
+    underlying: str = Field(description="BTC, ETH, SOL, etc")
+    contract_type: str = Field(description="PERPETUAL or FUTURES")
+    expiration: Optional[datetime] = Field(None, description="Null for perpetuals")
+    
+    # Pricing
+    bid: float = Field(0.0, description="Current bid")
+    ask: float = Field(0.0, description="Current ask")
+    index_price: float = Field(0.0, description="Underlying spot price")
+    mark_price: float = Field(0.0, description="Mark price (perps have basis)")
+    
+    # Perpetual specific
+    funding_rate: float = Field(0.0, description="Hourly funding rate")
+    funding_rate_8h: float = Field(0.0, description="Predicted 8-hour rate")
+    
+    # Volumes and interest
+    bid_volume: float = Field(0.0, description="Bid volume in contracts")
+    ask_volume: float = Field(0.0, description="Ask volume in contracts")
+    volume_24h: float = Field(0.0, description="Volume in USD")
+    open_interest: float = Field(0.0, description="Total open contracts")
+    
+    # Liquidation
+    liquidation_price_long: float = Field(0.0, description="Long liquidation level")
+    liquidation_price_short: float = Field(0.0, description="Short liquidation level")
+    
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    exchange: str = Field("Binance", description="Binance, FTX, Bybit, Deribit, etc")
+
+
+class MultiLegOrder(BaseModel):
+    """
+    Coordinated multi-leg strategy execution.
+    
+    多腿策略的协调执行。
+    """
+    strategy_id: str = Field(description="Unique strategy ID")
+    strategy_name: str = Field(description="CALL_SPREAD, IRON_CONDOR, PAIR_TRADE, etc")
+    
+    # Legs (each contains multiple fields)
+    legs: List[Dict[str, Any]] = Field(default_factory=list, description="Each leg with order details")
+    
+    # Strategy economics
+    total_cost: float = Field(0.0, description="Net debit/credit for entire strategy")
+    max_loss: float = Field(0.0, description="Max loss if all legs filled at limit")
+    max_profit: float = Field(0.0, description="Max profit on strategy")
+    breakeven: List[float] = Field(default_factory=list, description="Breakeven price(s)")
+    
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    executed_at: Optional[datetime] = Field(None)
+    status: str = Field("PLANNED", description="PLANNED, EXECUTING, FILLED, PARTIAL, CANCELLED")
+    execution_order: List[int] = Field(default_factory=list, description="Order to execute legs")
+    notes: str = Field("", description="Strategy thesis and exit plan")
+
+
+class GreeksSnapshot(BaseModel):
+    """
+    Real-time Greeks for position monitoring.
+    
+    实时希腊字母（Greeks）用于头寸监控。
+    """
+    snapshot_id: str = Field(description="Unique snapshot ID")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    position_id: str = Field(description="Which position/strategy")
+    
+    # Aggregate Greeks
+    total_delta: float = Field(0.0, description="Share equivalents")
+    total_gamma: float = Field(0.0, description="Delta change per 1% move")
+    total_theta: float = Field(0.0, description="Daily decay in USD")
+    total_vega: float = Field(0.0, description="Per 1% IV change")
+    total_rho: float = Field(0.0, description="Per 1% rate change")
+    
+    # By leg
+    leg_greeks: List[Dict[str, float]] = Field(default_factory=list, description="Greeks for each leg")
+    
+    # Risk metrics
+    delta_pct: float = Field(0.0, description="% of portfolio at risk")
+    theta_as_return_pct: float = Field(0.0, description="Theta as % return")
+    vega_exposure: float = Field(0.0, description="IV sensitivity in $")
+    gamma_exposure: float = Field(0.0, description="Convexity in $")
+    
+    # Alerts
+    delta_drift_alert: bool = Field(False, description="Delta drifted >10%?")
+    theta_decay_strong: bool = Field(False, description="High time decay?")
+    gamma_risk_high: bool = Field(False, description="High gamma near expiration?")
+    vega_exposure_alert: bool = Field(False, description="High IV sensitivity?")
+    
+    rebalance_needed: bool = Field(False, description="Should rebalance?")
+    rebalance_shares: Optional[int] = Field(None, description="How many shares to hedge")
+    rebalance_cost: Optional[float] = Field(None, description="Rebalance cost")
+
+
+class HedgeAllocation(BaseModel):
+    """
+    Recommended hedging position sizing.
+    
+    推荐对冲头寸规模。
+    """
+    allocation_id: str = Field(description="Unique allocation ID")
+    base_position: Dict[str, Any] = Field(default_factory=dict, description="Position being hedged")
+    
+    # Strategies (ranked by efficiency)
+    hedging_strategies: List[Dict[str, Any]] = Field(default_factory=list, description="Strategy options")
+    
+    optimal_hedge: str = Field("", description="Recommended strategy")
+    hedge_ratio: float = Field(1.0, description="% of position to hedge", ge=0.0, le=1.0)
+    cost_as_pct_position: float = Field(0.0, description="Cost as % of value")
+    protection_level: float = Field(0.0, description="Downside protected to this price")
+    
+    # Details
+    thesis: str = Field("", description="Why this hedge")
+    conditions_to_close: List[str] = Field(default_factory=list, description="When to close")
+    max_duration_days: int = Field(60, description="Max hold period")
+    
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: datetime = Field(default_factory=datetime.utcnow, description="Recommendation expiration")
+
+
+class StrategyPerformance(BaseModel):
+    """
+    Track performance of multi-leg strategies.
+    
+    跟踪多腿策略的性能。
+    """
+    performance_id: str = Field(description="Unique ID")
+    strategy_id: str = Field(description="Which strategy")
+    strategy_name: str = Field(description="Strategy name")
+    
+    # Entry
+    entry_price: float = Field(0.0, description="Entry mark price")
+    entry_date: datetime = Field(default_factory=datetime.utcnow)
+    entry_capital: float = Field(0.0, description="Capital deployed")
+    
+    # Current
+    current_price: float = Field(0.0, description="Current mark")
+    days_held: int = Field(0, description="Days held")
+    
+    # P&L
+    theoretical_pnl: float = Field(0.0, description="If closed at current prices")
+    theta_accumulated: float = Field(0.0, description="Time decay captured")
+    gamma_pnl: float = Field(0.0, description="Realized gamma P&L")
+    vega_pnl: float = Field(0.0, description="IV change P&L")
+    delta_pnl: float = Field(0.0, description="Directional P&L")
+    
+    # Returns
+    return_pct: float = Field(0.0, description="% return on capital")
+    annualized_return: float = Field(0.0, description="Annualized %")
+    sharpe_ratio: Optional[float] = Field(None, description="Risk-adjusted return")
+    max_drawdown: float = Field(0.0, description="Worst case P&L")
+    
+    # Current Greeks  
+    current_delta: float = Field(0.0)
+    current_theta: float = Field(0.0)
+    current_vega: float = Field(0.0)
+    
+    # Exit strategy
+    target_profit: float = Field(0.0, description="Close at this P&L")
+    stop_loss: float = Field(0.0, description="Close if P&L drops to this")
+    time_exit: Optional[datetime] = Field(None, description="Close by this date")
+    exit_reason: str = Field("", description="Why was it closed")
+    
+    status: str = Field("ACTIVE", description="ACTIVE, CLOSED, EXPIRED")
+    closed_at: Optional[datetime] = Field(None)
+    final_pnl: Optional[float] = Field(None, description="Actual P&L when closed")
+
+
+class VolatilityProfile(BaseModel):
+    """
+    Volatility regime and arbitrage tracking.
+    
+    波动率体制和套利机会跟踪。
+    """
+    profile_id: str = Field(description="Unique ID")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    ticker: str = Field(description="Which security")
+    
+    # Implied volatility
+    iv_30d: float = Field(0.0, description="30-day IV", ge=0.0)
+    iv_60d: float = Field(0.0, description="60-day IV", ge=0.0)
+    iv_90d: float = Field(0.0, description="90-day IV", ge=0.0)
+    iv_term_structure: str = Field("FLAT", description="UPWARD_SLOPING, FLAT, INVERTED")
+    
+    # Realized volatility
+    realized_vol_20d: float = Field(0.0, description="Last 20 days", ge=0.0)
+    realized_vol_60d: float = Field(0.0, description="Last 60 days", ge=0.0)
+    
+    # Skew and surface
+    put_call_skew: float = Field(0.0, description="OTM put IV vs call IV")
+    volatility_smile: Dict[str, float] = Field(default_factory=dict, description="IV by strike")
+    
+    # Historical context
+    iv_percentile: float = Field(50.0, description="0-100 IV rank", ge=0.0, le=100.0)
+    iv_high_52w: float = Field(0.0, description="52-week high", ge=0.0)
+    iv_low_52w: float = Field(0.0, description="52-week low", ge=0.0)
+    
+    # Arbitrage
+    iv_vs_rv_spread: float = Field(0.0, description="(IV - RV) in bps")
+    calendar_spread_available: bool = Field(False, description="Calendar arb available?")
+    butterfly_available: bool = Field(False, description="Butterfly arb available?")
+    skew_arbitrage: float = Field(0.0, description="Skew spread value")
+    
+    # Forecast
+    vol_forecast_7d: float = Field(0.0, description="1-week forecast", ge=0.0)
+    vol_forecast_30d: float = Field(0.0, description="1-month forecast", ge=0.0)
+    vol_direction_bias: str = Field("STABLE", description="UP, DOWN, STABLE")
+    
+    recommendation: str = Field("", description="VIX level and strategy suggestion")
+
+
+class PairCorrelation(BaseModel):
+    """
+    Track correlations for pair trading strategies.
+    
+    跟踪配对交易的相关性。
+    """
+    pair_id: str = Field(description="Unique pair ID")
+    ticker1: str = Field(description="First security")
+    ticker2: str = Field(description="Second security")
+    correlation_period_days: int = Field(60, description="Calculated over how long")
+    
+    # Correlation metrics
+    correlation_60d: float = Field(0.0, description="60-day correlation", ge=-1.0, le=1.0)
+    correlation_252d: float = Field(0.0, description="Long-term correlation", ge=-1.0, le=1.0)
+    covariance_60d: float = Field(0.0, description="Covariance")
+    beta_1_vs_2: float = Field(1.0, description="Beta of ticker1 vs ticker2")
+    
+    # Spread analysis
+    current_spread: float = Field(0.0, description="Ticker1 - Ticker2 ratio")
+    mean_spread: float = Field(0.0, description="Historical mean")
+    std_spread: float = Field(1.0, description="Std deviation", gt=0.0)
+    zscore_spread: float = Field(0.0, description="How many stds from mean")
+    
+    # Mean reversion
+    halflife_days: int = Field(30, description="Days to mean revert")
+    mean_revert_probability: float = Field(0.5, description="% likely to revert", ge=0.0, le=1.0)
+    
+    # Strategy
+    current_trade: str = Field("NONE", description="LONG_1_SHORT_2, LONG_2_SHORT_1, NONE")
+    entry_zscore: float = Field(2.0, description="Entry zscore")
+    exit_zscore: float = Field(0.5, description="Exit zscore")
+    
+    # Execution
+    shares_1: int = Field(0, description="Qty of ticker1")
+    shares_2: int = Field(0, description="Qty of ticker2")
+    hedge_ratio: float = Field(1.0, description="Beta hedge ratio", gt=0.0)
+    
+    status: str = Field("MONITORING", description="MONITORING, ACTIVE_TRADE, CLOSED")
+    entry_date: Optional[datetime] = Field(None)
+    exit_date: Optional[datetime] = Field(None)
+    pnl: Optional[float] = Field(None, description="If closed")
+    
+    next_review: datetime = Field(default_factory=datetime.utcnow)
+
+
 class DeerflowState(BaseModel):
     """
     Master state object that flows through the entire deerflow graph.
@@ -1017,8 +1366,8 @@ class DeerflowState(BaseModel):
     """
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    # Session metadata
-    session_id: str = Field("", description="Unique session identifier")
+    # Session metadata - Annotated with reducer to handle concurrent LandGraph updates
+    session_id: Annotated[str, _reduce_session_id] = Field("", description="Unique session identifier")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -1075,6 +1424,66 @@ class DeerflowState(BaseModel):
     circuit_breaker_active: bool = Field(False, description="Risk circuit breaker triggered?")
     circuit_breaker_reason: str = Field("", description="Reason for circuit breaker halt")
 
+    # Phase 7: Advanced Strategies & Derivatives Trading
+    active_options: Dict[str, OptionContract] = Field(default_factory=dict, description="Active options positions")
+    active_futures: Dict[str, FuturesContract] = Field(default_factory=dict, description="Active futures positions")
+    active_crypto_derivatives: Dict[str, CryptoDerivative] = Field(default_factory=dict, description="Crypto perpetuals/futures")
+    
+    active_strategies: Dict[str, MultiLegOrder] = Field(default_factory=dict, description="Multi-leg strategy orders")
+    strategy_performance: Dict[str, StrategyPerformance] = Field(default_factory=dict, description="Strategy P&L tracking")
+    
+    current_greeks: Dict[str, GreeksSnapshot] = Field(default_factory=dict, description="Greeks for all positions")
+    greek_alerts: List[Dict[str, Any]] = Field(default_factory=list, description="Greeks drift alerts")
+    
+    recommended_hedges: Dict[str, HedgeAllocation] = Field(default_factory=dict, description="Hedge recommendations")
+    active_hedges: Dict[str, MultiLegOrder] = Field(default_factory=dict, description="Active hedging strategies")
+    
+    volatility_profiles: Dict[str, VolatilityProfile] = Field(default_factory=dict, description="Vol regimes by ticker")
+    vol_opportunities: List[Dict[str, Any]] = Field(default_factory=list, description="Vol arbitrage opportunities")
+    
+    correlations: Dict[str, PairCorrelation] = Field(default_factory=dict, description="Pair correlations")
+    active_pairs: Dict[str, PairCorrelation] = Field(default_factory=dict, description="Active pair trades")
+    
+    # Greeks management controls
+    target_delta: float = Field(0.0, description="Portfolio-level delta target", ge=-1.0, le=1.0)
+    rebalance_threshold: float = Field(0.15, description="Rebalance if delta drifts >15%", ge=0.0, le=1.0)
+    last_greek_rebalance: Optional[datetime] = Field(None, description="Last Greeks rebalancing time")
+
+    # ========================================================================
+    # TRADING INTEGRATION: Virtual portfolio execution & tracking
+    # ========================================================================
+    trading_enabled: bool = Field(False, description="Enable virtual trading execution")
+    portfolio_id: Optional[str] = Field(None, description="Virtual portfolio identifier")
+    
+    # Portfolio state
+    cash_balance: float = Field(100000.0, description="Available cash in portfolio")
+    positions: Dict[str, Dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Current holdings {ticker: {quantity, avg_cost, current_value}}"
+    )
+    
+    # Trade execution
+    pending_trades: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Trades awaiting execution from consensus"
+    )
+    executed_trades: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Historical executed trades with P&L"
+    )
+    
+    # Portfolio metrics
+    portfolio_metrics: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Aggregated P&L, returns, Sharpe, drawdown, win rate"
+    )
+    
+    # Configuration
+    trading_config: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Trading parameters: position_size_pct, slippage, commission, etc"
+    )
+
     # Graph execution metadata
     active_nodes: List[str] = Field(default_factory=list)
     completed_nodes: List[str] = Field(default_factory=list)
@@ -1125,280 +1534,6 @@ class DeerflowState(BaseModel):
         self.errors[node].append(error_entry)
 
 
-# ============================================================================
-# PHASE 5: Production Deployment & Real-Time Integration
-# ============================================================================
-
-class BacktestPeriod(BaseModel):
-    """
-    Historical backtest period results.
-    """
-    period_id: int = Field(description="Period identifier")
-    start_date: datetime = Field(description="Period start date")
-    end_date: datetime = Field(description="Period end date")
-    
-    # Returns
-    portfolio_return: float = Field(0.0, description="Portfolio return in period")
-    benchmark_return: float = Field(0.0, description="Benchmark return")
-    outperformance: float = Field(0.0, description="Active return vs benchmark")
-    
-    # Risk metrics
-    volatility: float = Field(0.0, description="Period volatility")
-    max_drawdown: float = Field(0.0, description="Maximum drawdown in period")
-    sharpe_ratio: float = Field(0.0, description="Sharpe ratio")
-    
-    # Transactions
-    num_trades: int = Field(0, description="Number of trades executed")
-    total_costs: float = Field(0.0, description="Total transaction costs")
-    turnover: float = Field(0.0, description="Portfolio turnover")
-
-
-class BacktestResult(BaseModel):
-    """
-    Complete backtest validation of trading strategy.
-    
-    用于验证交易策略的完整回测结果。包含历史性能指标、
-    风险分析、成本估算和周期性数据。
-    """
-    backtest_id: str = Field(description="Unique backtest identifier")
-    backtest_name: str = Field(description="Descriptive name")
-    backtest_start_date: datetime = Field(description="Backtest period start")
-    backtest_end_date: datetime = Field(description="Backtest period end")
-    backtest_days: int = Field(0, description="Number of trading days")
-    
-    # Holdings and rebalancing
-    starting_portfolio: Dict[str, float] = Field(default_factory=dict)
-    ending_portfolio: Dict[str, float] = Field(default_factory=dict)
-    rebalance_frequency: str = Field("monthly", description="monthly, quarterly, etc.")
-    
-    # Overall results
-    total_return: float = Field(0.0, description="Cumulative total return")
-    annualized_return: float = Field(0.0, description="Annualized return (%)")
-    total_volatility: float = Field(0.0, description="Cumulative volatility")
-    annualized_volatility: float = Field(0.0, description="Annualized volatility (%)")
-    sharpe_ratio: float = Field(0.0, description="Overall Sharpe ratio")
-    sortino_ratio: float = Field(0.0, description="Downside risk adjusted")
-    
-    # Benchmark comparison
-    benchmark_return: float = Field(0.0, description="Benchmark total return")
-    benchmark_volatility: float = Field(0.0, description="Benchmark volatility")
-    outperformance: float = Field(0.0, description="Active return vs benchmark")
-    tracking_error: float = Field(0.0, description="Active risk vs benchmark")
-    information_ratio: float = Field(0.0, description="Outperformance / tracking error")
-    
-    # Drawdown analysis
-    max_drawdown: float = Field(0.0, description="Maximum drawdown")
-    max_drawdown_duration: int = Field(0, description="Longest recovery in days")
-    num_drawdowns_20pct: int = Field(0, description="Drawdowns >20%")
-    
-    # Execution analysis
-    total_trades: int = Field(0, description="Total transaction count")
-    total_costs: float = Field(0.0, description="Total transaction costs")
-    avg_cost_per_trade: float = Field(0.0, description="Average cost per trade")
-    total_turnover: float = Field(0.0, description="Total turnover")
-    
-    # Period-by-period results
-    periods: List[BacktestPeriod] = Field(default_factory=list)
-    
-    # Worst/best periods
-    worst_month: float = Field(0.0, description="Worst monthly return")
-    best_month: float = Field(0.0, description="Best monthly return")
-    positive_months: int = Field(0, description="Months with positive return")
-    total_months: int = Field(0, description="Total months in backtest")
-    
-    # Robustness
-    stress_test_return: float = Field(0.0, description="Return in worst scenario")
-    recovery_time_avg: float = Field(0.0, description="Average recovery time (days)")
-    
-    # Summary
-    summary: str = Field("", description="Backtest summary")
-    conclusion: str = Field("", description="Recommended actions based on backtest")
-
-
-class EfficientFrontierData(BaseModel):
-    """
-    Multiple portfolios spanning the efficient frontier.
-    
-    提供位于有效边界上的多个投资组合，从最低风险到
-    风险偏好组合。包括特殊投资组合和约束分析。
-    """
-    num_portfolios: int = Field(50, description="Number of portfolios on frontier")
-    min_return: float = Field(0.0, description="Minimum return on frontier")
-    max_return: float = Field(0.20, description="Maximum return on frontier")
-    
-    # Portfolios
-    portfolios: List[EfficientFrontierPoint] = Field(default_factory=list)
-    
-    # Special portfolios
-    global_minimum_variance: Optional[EfficientFrontierPoint] = Field(None, description="Lowest risk portfolio")
-    maximum_sharpe_portfolio: Optional[EfficientFrontierPoint] = Field(None, description="Best risk-adjusted portfolio")
-    current_portfolio: Optional[EfficientFrontierPoint] = Field(None, description="Current allocation")
-    
-    # Constraint analysis
-    constraints_active: List[str] = Field(default_factory=list, description="Which constraints are binding")
-    constraint_impacts: Dict[str, float] = Field(default_factory=dict, description="Performance impact of constraints")
-    
-    # Summary
-    summary: str = Field("", description="Frontier analysis summary")
-
-
-class TransactionExecutionPlan(BaseModel):
-    """
-    Detailed execution plan with transaction costs and timing.
-    
-    执行计划，包括交易详情、成本估算和执行策略。
-    """
-    execution_id: str = Field(description="Unique execution identifier")
-    execution_date: datetime = Field(default_factory=datetime.utcnow)
-    
-    # Trades
-    trades: List[Dict[str, Any]] = Field(default_factory=list, description="Individual trades with details")
-    
-    # Cost estimation
-    estimated_commission: float = Field(0.0, description="Estimated commission costs")
-    estimated_market_impact: float = Field(0.0, description="Estimated market impact")
-    estimated_slippage: float = Field(0.0, description="Estimated execution slippage")
-    estimated_opportunity_cost: float = Field(0.0, description="Cost of delayed execution")
-    total_estimated_cost: float = Field(0.0, description="Total estimated costs")
-    total_cost_bps: float = Field(0.0, description="Costs in basis points (0.01%)")
-    
-    # Execution strategy
-    execution_strategy: str = Field("vwap", description="Execution algorithm: vwap, twap, direct, etc")
-    execution_timeline: str = Field("1 day", description="How quickly to execute")
-    market_hours_only: bool = Field(True, description="Limit to market hours?")
-    
-    # Constraints
-    max_order_size: float = Field(0.1, description="Max order as % of daily volume")
-    avoid_news: bool = Field(True, description="Avoid execution around earnings?")
-    tax_aware: bool = Field(True, description="Consider tax-loss harvesting?")
-    
-    # Summary
-    summary: str = Field("", description="Execution plan summary")
-
-
-class PortfolioSnapshot(BaseModel):
-    """
-    Real-time portfolio state and metrics snapshot.
-    
-    实时投资组合状态快照，包括头寸、风险指标和性能。
-    """
-    snapshot_id: str = Field(description="Unique snapshot identifier")
-    snapshot_time: datetime = Field(default_factory=datetime.utcnow)
-    
-    # Current holdings
-    current_positions: Dict[str, float] = Field(default_factory=dict, description="Current holdings by ticker")
-    target_positions: Dict[str, float] = Field(default_factory=dict, description="Target allocations")
-    
-    # Position metrics
-    position_values: Dict[str, float] = Field(default_factory=dict, description="Current value by position")
-    position_returns: Dict[str, float] = Field(default_factory=dict, description="Return of each position")
-    position_drift: Dict[str, float] = Field(default_factory=dict, description="Drift from target")
-    
-    # Portfolio metrics
-    total_value: float = Field(0.0, description="Total portfolio value")
-    cash_position: float = Field(0.0, description="Cash & equivalents")
-    gross_exposure: float = Field(0.0, description="Long + abs(short)")
-    net_exposure: float = Field(0.0, description="Long - short")
-    leverage_ratio: float = Field(1.0, description="Gross / (gross + short)")
-    
-    # Risk metrics (real-time)
-    portfolio_volatility: float = Field(0.0, description="Current portfolio volatility")
-    portfolio_beta: float = Field(1.0, description="Market beta")
-    portfolio_value_at_risk: float = Field(0.0, description="Current VaR")
-    portfolio_drawdown: float = Field(0.0, description="Current drawdown from peak")
-    
-    # Performance (YTD/since inception)
-    ytd_return: float = Field(0.0, description="Year-to-date return")
-    inception_return: float = Field(0.0, description="Total return since inception")
-    monthly_return: float = Field(0.0, description="Current month return")
-    daily_return: float = Field(0.0, description="Today's return")
-    
-    # Alert flags
-    rebalancing_needed: bool = Field(False, description="Drift triggers rebalancing?")
-    risk_threshold_exceeded: bool = Field(False, description="Risk above limits?")
-    cash_needed: bool = Field(False, description="Margin call or cash needed?")
-
-
-class LiveTradingSession(BaseModel):
-    """
-    Real-time active trading session state.
-    
-    实时交易会话，追踪执行的交易和性能指标。
-    """
-    session_id: str = Field(description="Unique session identifier")
-    session_start: datetime = Field(description="Session start time")
-    session_end: Optional[datetime] = Field(None, description="Session end time")
-    
-    # Portfolio state
-    starting_portfolio: Dict[str, float] = Field(default_factory=dict)
-    current_portfolio: Dict[str, float] = Field(default_factory=dict)
-    starting_value: float = Field(0.0, description="Portfolio value at session start")
-    current_value: float = Field(0.0, description="Current portfolio value")
-    session_pnl: float = Field(0.0, description="Session profit/loss")
-    session_pnl_pct: float = Field(0.0, description="Session return (%)")
-    
-    # Trading activity
-    trades_executed: List[Dict[str, Any]] = Field(default_factory=list, description="Executed trades")
-    pending_trades: List[Dict[str, Any]] = Field(default_factory=list, description="Pending order queue")
-    rejected_trades: List[Dict[str, Any]] = Field(default_factory=list, description="Failed executions")
-    
-    # Execution metrics
-    total_commissions: float = Field(0.0, description="Total execution costs")
-    total_slippage: float = Field(0.0, description="Total slippage vs target")
-    total_market_impact: float = Field(0.0, description="Total market impact")
-    
-    # Status
-    is_active: bool = Field(True, description="Is session currently active?")
-    error_count: int = Field(0, description="Number of errors in session")
-    last_error: Optional[str] = Field(None, description="Most recent error message")
-
-
-class PerformanceMetricsSnapshot(BaseModel):
-    """
-    Comprehensive real-time performance metrics snapshot.
-    
-    完整的实时性能指标，包括收益、风险和风险调整指标。
-    """
-    metrics_date: datetime = Field(default_factory=datetime.utcnow)
-    
-    # Returns
-    daily_return: float = Field(0.0, description="Daily return")
-    weekly_return: float = Field(0.0, description="Weekly return")
-    monthly_return: float = Field(0.0, description="Current month-to-date")
-    ytd_return: float = Field(0.0, description="Year-to-date")
-    inception_return: float = Field(0.0, description="Total return since inception")
-    
-    # Risk
-    daily_volatility: float = Field(0.0, description="Daily volatility")
-    rolling_volatility_20d: float = Field(0.0, description="20-day rolling volatility")
-    rolling_volatility_60d: float = Field(0.0, description="60-day rolling volatility")
-    current_drawdown: float = Field(0.0, description="From peak drawdown")
-    max_drawdown_20d: float = Field(0.0, description="Max DD in last 20 days")
-    max_drawdown_60d: float = Field(0.0, description="Max DD in last 60 days")
-    
-    # Risk-adjusted
-    sharpe_ratio_daily: float = Field(0.0, description="Daily Sharpe ratio")
-    sharpe_ratio_annual: float = Field(0.0, description="Annualized Sharpe ratio")
-    sortino_ratio: float = Field(0.0, description="Downside risk adjusted")
-    calmar_ratio: float = Field(0.0, description="Return / max drawdown")
-    
-    # Relative performance
-    benchmark_return: float = Field(0.0, description="Benchmark return same period")
-    outperformance: float = Field(0.0, description="Active return")
-    tracking_error: float = Field(0.0, description="Active risk")
-    information_ratio: float = Field(0.0, description="IR (outperformance/tracking error)")
-    
-    # Win rate
-    positive_days: int = Field(0, description="Days with positive return")
-    total_days: int = Field(0, description="Total trading days")
-    win_rate: float = Field(0.0, description="Positive days %")
-    best_day: float = Field(0.0, description="Best daily return")
-    worst_day: float = Field(0.0, description="Worst daily return")
-    avg_winning_day: float = Field(0.0, description="Average positive return")
-    avg_losing_day: float = Field(0.0, description="Average negative return")
-
-
-
 # Import and re-export for convenience
 try:
     # Package context (when imported as deerflow_openbb module)
@@ -1406,6 +1541,8 @@ try:
 except ImportError:
     # Direct context (when imported directly)
     from config import get_settings
+
+
 
 __all__ = [
     "AnalystType",
@@ -1447,5 +1584,15 @@ __all__ = [
     "BrokerAccountState",
     "BrokerExecutionPlan",
     "ComplianceRecord",
+    # Phase 7 additions
+    "OptionContract",
+    "FuturesContract",
+    "CryptoDerivative",
+    "MultiLegOrder",
+    "GreeksSnapshot",
+    "HedgeAllocation",
+    "StrategyPerformance",
+    "VolatilityProfile",
+    "PairCorrelation",
     "get_settings",
 ]

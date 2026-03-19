@@ -9,8 +9,8 @@ import pytest
 import asyncio
 from datetime import datetime
 
-from deerflow_openbb.state import DeerflowState, AnalystType
-from deerflow_openbb.graph import create_mock_graph
+from src.models import DeerflowState, AnalystType
+from src.graph import create_mock_graph
 
 
 @pytest.mark.asyncio
@@ -30,10 +30,10 @@ async def test_mock_data_pipeline():
         }
     )
 
-    # Execute graph
+    # Execute graph using async invocation
     config = {"configurable": {"thread_id": state.session_id}}
 
-    result = graph.invoke(state, config)
+    result = await graph.ainvoke(state, config)
 
     # Validate results
     assert result.session_id == "test_mock_001"
@@ -94,7 +94,7 @@ async def test_single_ticker_analysis():
         session_id="test_single_001"
     )
 
-    result = graph.invoke(state, {"configurable": {"thread_id": state.session_id}})
+    result = await graph.ainvoke(state, {"configurable": {"thread_id": state.session_id}})
 
     assert "AAPL" in result.ticker_data
     assert "AAPL" in result.technical_analyses
@@ -123,7 +123,7 @@ async def test_multiple_tickers_independence():
         session_id="test_multi_001"
     )
 
-    result = graph.invoke(state, {"configurable": {"thread_id": state.session_id}})
+    result = await graph.ainvoke(state, {"configurable": {"thread_id": state.session_id}})
 
     # All tickers analyzed independently
     decisions = result.trading_decisions
@@ -144,7 +144,8 @@ async def test_multiple_tickers_independence():
     return result
 
 
-def test_state_transitions():
+@pytest.mark.asyncio
+async def test_state_transitions():
     """Test that state transitions properly through graph."""
     graph = create_mock_graph()
 
@@ -160,7 +161,7 @@ def test_state_transitions():
     assert len(initial_state.completed_nodes) == 0
 
     # Execute
-    result = graph.invoke(initial_state, {
+    result = await graph.ainvoke(initial_state, {
         "configurable": {"thread_id": initial_state.session_id}
     })
 
@@ -178,7 +179,8 @@ def test_state_transitions():
     print(f"\n✓ State transitions test passed")
 
 
-def test_decision_logic():
+@pytest.mark.asyncio
+async def test_decision_logic():
     """Test that decision node produces actionable signals."""
 
     # This is a simplified test - we use mock graph which includes all nodes
@@ -189,7 +191,7 @@ def test_decision_logic():
         session_id="test_decisions_001"
     )
 
-    result = graph.invoke(state, {
+    result = await graph.ainvoke(state, {
         "configurable": {"thread_id": state.session_id}
     })
 

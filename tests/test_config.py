@@ -4,7 +4,7 @@ Test suite for deerflow-openbb configuration management.
 
 import pytest
 
-from deerflow_openbb.config import Settings, get_settings, reload_settings
+from src.config import Settings, get_settings, reload_settings
 
 
 def test_settings_loading():

@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 from datetime import datetime, timedelta
 import numpy as np
 
-from deerflow_openbb.state import (
+from src.models import (
     DeerflowState,
     ConsensusSignal,
     SignalType,
@@ -28,7 +28,7 @@ from deerflow_openbb.state import (
     PerformanceAttribution,
     RiskAnalysis,
 )
-from deerflow_openbb.nodes import (
+from src.nodes import (
     EfficientFrontierNode,
     PerformanceAttributionNode,
     TransactionCostNode,
@@ -507,10 +507,10 @@ class TestPhase5ErrorHandling:
     async def test_nodes_log_errors_properly(self):
         """Test that nodes properly log errors to state."""
         node = BacktestingEngineNode()
-        state = DeerflowState(tickers=["AAPL"])
+        state = DeerflowState(tickers=["AAPL"], ticker_data={})
         
-        # Mock to force an error
-        with patch.object(node, '_run_backtest', side_effect=ValueError("Test error")):
+        # Mock to force an error during backtest
+        with patch.object(node, '_run_backtest_with_data', side_effect=ValueError("Test error")):
             result = await node.execute(state)
             
             # Error should be logged

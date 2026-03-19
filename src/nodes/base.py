@@ -5,7 +5,8 @@ Provides common functionality like logging, error handling, and state management
 """
 
 from typing import Optional, TypedDict, Any
-from ..state import DeerflowState, get_settings
+from ..models import DeerflowState
+from ..config import get_settings
 
 
 class NodeResult(TypedDict):

@@ -13,7 +13,7 @@ from datetime import datetime
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 
-from .state import DeerflowState, AnalystType, ConsensusSignal
+from .models import DeerflowState, AnalystType, ConsensusSignal
 from .nodes import (
     StockDataNode,
     TechnicalAnalystNode,
@@ -34,8 +34,23 @@ from .nodes import (
     PerformanceAttributionNode,
     TransactionCostNode,
     BacktestingEngineNode,
+    # Trading integration
+    RecommendationToTradeNode,
+    TradeExecutionNode,
+    PortfolioMetricsNode,
+    # Advanced strategies & derivatives
+    OptionsAnalysisNode,
+    FuturesAnalysisNode,
+    CryptoDerivativesNode,
+    StrategyBuilderNode,
+    GreeksMonitorNode,
+    DeltaHedgingNode,
+    HedgeRecommenderNode,
+    VolatilityArbitrageNode,
+    PairTradingNode,
+    StrategyExecutorNode,
 )
-from .broker_integration import (
+from .brokers import (
     # Phase 6 additions
     BrokerConnectorNode,
     TradeExecutorNode,
@@ -125,6 +140,12 @@ def create_deerflow_graph(config: GraphConfig = None) -> StateGraph:
     macro_analyst_node = MacroAnalystNode()
     risk_analyst_node = RiskAnalystNode()
     consensus_node = ConsensusNode()
+    
+    # Trading integration nodes
+    recommendation_to_trade_node = RecommendationToTradeNode()
+    trade_execution_node = TradeExecutionNode()
+    portfolio_metrics_node = PortfolioMetricsNode()
+    
     portfolio_risk_node = PortfolioRiskNode()
     portfolio_optimization_node = PortfolioOptimizationNode()
     macro_scenario_node = MacroScenarioNode()
@@ -144,6 +165,18 @@ def create_deerflow_graph(config: GraphConfig = None) -> StateGraph:
     risk_control_node = RiskControlNode()
     compliance_logger_node = ComplianceLoggerNode()
     decision_node = DecisionNode()
+    
+    # Phase 7 nodes: Advanced Strategies & Derivatives
+    options_analysis_node = OptionsAnalysisNode()
+    futures_analysis_node = FuturesAnalysisNode()
+    crypto_derivatives_node = CryptoDerivativesNode()
+    strategy_builder_node = StrategyBuilderNode()
+    greeks_monitor_node = GreeksMonitorNode()
+    delta_hedging_node = DeltaHedgingNode()
+    hedge_recommender_node = HedgeRecommenderNode()
+    volatility_arbitrage_node = VolatilityArbitrageNode()
+    pair_trading_node = PairTradingNode()
+    strategy_executor_node = StrategyExecutorNode()
 
     # Register nodes with the graph
     workflow.add_node("stock_data", stock_data_node.execute)
@@ -154,6 +187,12 @@ def create_deerflow_graph(config: GraphConfig = None) -> StateGraph:
     workflow.add_node("macro_analyst", macro_analyst_node.execute)
     workflow.add_node("risk_analyst", risk_analyst_node.execute)
     workflow.add_node("consensus", consensus_node.execute)
+    
+    # Trading integration nodes
+    workflow.add_node("recommendation_to_trade", recommendation_to_trade_node._execute)
+    workflow.add_node("trade_execution", trade_execution_node._execute)
+    workflow.add_node("portfolio_metrics", portfolio_metrics_node._execute)
+    
     workflow.add_node("portfolio_risk", portfolio_risk_node.execute)
     workflow.add_node("portfolio_optimization", portfolio_optimization_node.execute)
     workflow.add_node("macro_scenario", macro_scenario_node.execute)
@@ -172,36 +211,50 @@ def create_deerflow_graph(config: GraphConfig = None) -> StateGraph:
     workflow.add_node("account_monitor", account_monitor_node.execute)
     workflow.add_node("risk_control", risk_control_node.execute)
     workflow.add_node("compliance_logger", compliance_logger_node.execute)
+    
+    # Advanced Strategies & Derivatives
+    workflow.add_node("options_analysis", options_analysis_node.execute)
+    workflow.add_node("futures_analysis", futures_analysis_node.execute)
+    workflow.add_node("crypto_derivatives", crypto_derivatives_node.execute)
+    workflow.add_node("strategy_builder", strategy_builder_node.execute)
+    workflow.add_node("greeks_monitor", greeks_monitor_node.execute)
+    workflow.add_node("delta_hedging", delta_hedging_node.execute)
+    workflow.add_node("hedge_recommender", hedge_recommender_node.execute)
+    workflow.add_node("volatility_arbitrage", volatility_arbitrage_node.execute)
+    workflow.add_node("pair_trading", pair_trading_node.execute)
+    workflow.add_node("strategy_executor", strategy_executor_node.execute)
+    
     workflow.add_node("decision", decision_node.execute)
 
     # Parallel execution branch
     # After stock_data, all analyst nodes can run independently
     workflow.set_entry_point("stock_data")
 
-    # Connect stock_data to all analyst nodes
-    for analyst_node in [
-        "technical_analyst",
-        "fundamentals_analyst",
-        "news_analyst",
-        "growth_analyst",
-        "macro_analyst",
-        "risk_analyst",
-    ]:
-        workflow.add_edge("stock_data", analyst_node)
+    # Connect stock_data to all analyst nodes for parallel analysis
+    workflow.add_edge("stock_data", "technical_analyst")
+    workflow.add_edge("stock_data", "fundamentals_analyst")
+    workflow.add_edge("stock_data", "news_analyst")
+    workflow.add_edge("stock_data", "growth_analyst")
+    workflow.add_edge("stock_data", "macro_analyst")
+    workflow.add_edge("stock_data", "risk_analyst")
 
     # All analyst nodes converge to consensus
-    for analyst_node in [
-        "technical_analyst",
-        "fundamentals_analyst",
-        "news_analyst",
-        "growth_analyst",
-        "macro_analyst",
-        "risk_analyst",
-    ]:
-        workflow.add_edge(analyst_node, "consensus")
+    workflow.add_edge("technical_analyst", "consensus")
+    workflow.add_edge("fundamentals_analyst", "consensus")
+    workflow.add_edge("news_analyst", "consensus")
+    workflow.add_edge("growth_analyst", "consensus")
+    workflow.add_edge("macro_analyst", "consensus")
+    workflow.add_edge("risk_analyst", "consensus")
 
-    # Consensus leads to portfolio risk analysis (Phase 3)
-    workflow.add_edge("consensus", "portfolio_risk")
+    # Consensus leads to trading pipeline (virtual execution)
+    workflow.add_edge("consensus", "recommendation_to_trade")
+    
+    # Trading pipeline flow
+    workflow.add_edge("recommendation_to_trade", "trade_execution")
+    workflow.add_edge("trade_execution", "portfolio_metrics")
+    
+    # Portfolio metrics converges to portfolio risk analysis (Phase 3)
+    workflow.add_edge("portfolio_metrics", "portfolio_risk")
     
     # Portfolio risk leads to portfolio optimization (Phase 3)
     workflow.add_edge("portfolio_risk", "portfolio_optimization")
@@ -214,7 +267,7 @@ def create_deerflow_graph(config: GraphConfig = None) -> StateGraph:
     workflow.add_edge("macro_scenario", "multi_scenario_analysis")
     workflow.add_edge("rebalancing", "multi_scenario_analysis")
     
-    # Phase 5: Multi-scenario analysis branches to all Phase 5 nodes
+    # Phase 5: Multi-scenario analysis branches to all Phase 5 nodes in parallel
     workflow.add_edge("multi_scenario_analysis", "efficient_frontier")
     workflow.add_edge("multi_scenario_analysis", "performance_attribution")
     workflow.add_edge("multi_scenario_analysis", "transaction_cost")
@@ -235,9 +288,35 @@ def create_deerflow_graph(config: GraphConfig = None) -> StateGraph:
     workflow.add_edge("risk_control", "trade_executor")
     workflow.add_edge("account_monitor", "trade_executor")
     
-    # Trade executor monitors order status
+    # Trade executor monitors order status then derivatives analysis for hedging
     workflow.add_edge("trade_executor", "order_monitor")
+    workflow.add_edge("trade_executor", "options_analysis")
+    workflow.add_edge("trade_executor", "futures_analysis")
+    workflow.add_edge("trade_executor", "crypto_derivatives")
     
+    # Derivatives analysis converges to strategy builder
+    workflow.add_edge("options_analysis", "strategy_builder")
+    workflow.add_edge("futures_analysis", "strategy_builder")
+    workflow.add_edge("crypto_derivatives", "strategy_builder")
+    
+    # Strategy builder leads to Greeks monitoring
+    workflow.add_edge("strategy_builder", "greeks_monitor")
+    
+    # Greeks monitoring branches to hedging/arbitrage strategies
+    workflow.add_edge("greeks_monitor", "delta_hedging")
+    workflow.add_edge("greeks_monitor", "hedge_recommender")
+    workflow.add_edge("greeks_monitor", "volatility_arbitrage")
+    workflow.add_edge("greeks_monitor", "pair_trading")
+    
+    # All Phase 7 hedging/strategy nodes converge to strategy executor
+    workflow.add_edge("delta_hedging", "strategy_executor")
+    workflow.add_edge("hedge_recommender", "strategy_executor")
+    workflow.add_edge("volatility_arbitrage", "strategy_executor")
+    workflow.add_edge("pair_trading", "strategy_executor")
+    
+    # Phase 7 strategy executor leads to decision
+    workflow.add_edge("strategy_executor", "order_monitor")
+
     # Order monitor branches to position manager and compliance logger
     workflow.add_edge("order_monitor", "position_manager")
     workflow.add_edge("order_monitor", "compliance_logger")
@@ -276,7 +355,7 @@ async def run_deerflow_graph(
     Returns:
         Final DeerflowState with all results
     """
-    from .state import DeerflowState
+    from .models import DeerflowState
     from .config import get_settings
     import uuid
 
@@ -443,7 +522,7 @@ class MockStockDataNode(StockDataNode):
         """Generate mock data for testing."""
         import numpy as np
         import pandas as pd
-        from .state import TickerData, DataProvider
+        from .models import TickerData, DataProvider
 
         # Generate synthetic price data
         n_days = 500

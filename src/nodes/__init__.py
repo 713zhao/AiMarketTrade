@@ -8,6 +8,7 @@ This package organizes all trading logic nodes into focused modules:
 - consensus_node: Signal aggregation and decision making
 - portfolio_nodes: Portfolio-level analysis and optimization
 - production_nodes: Efficient frontier, attribution, costs, backtesting
+- advanced_nodes: Advanced strategies, derivatives, options, futures, Greeks management
 """
 
 # Base node interface
@@ -46,6 +47,29 @@ from .production_nodes import (
     BacktestingEngineNode,
 )
 
+# Advanced Strategies & Derivatives
+from .advanced_nodes import (
+    GreeksCalculator,
+    StrategyBuilder,
+    OptionsAnalysisNode,
+    FuturesAnalysisNode,
+    CryptoDerivativesNode,
+    StrategyBuilderNode,
+    GreeksMonitorNode,
+    DeltaHedgingNode,
+    HedgeRecommenderNode,
+    VolatilityArbitrageNode,
+    PairTradingNode,
+    StrategyExecutorNode,
+)
+
+# Trading Integration
+from .trading_nodes import (
+    RecommendationToTradeNode,
+    TradeExecutionNode,
+    PortfolioMetricsNode,
+)
+
 __all__ = [
     # Base
     "BaseNode",
@@ -73,4 +97,21 @@ __all__ = [
     "PerformanceAttributionNode",
     "TransactionCostNode",
     "BacktestingEngineNode",
+    # Advanced Strategies & Derivatives
+    "GreeksCalculator",
+    "StrategyBuilder",
+    "OptionsAnalysisNode",
+    "FuturesAnalysisNode",
+    "CryptoDerivativesNode",
+    "StrategyBuilderNode",
+    "GreeksMonitorNode",
+    "DeltaHedgingNode",
+    "HedgeRecommenderNode",
+    "VolatilityArbitrageNode",
+    "PairTradingNode",
+    "StrategyExecutorNode",
+    # Trading Integration
+    "RecommendationToTradeNode",
+    "TradeExecutionNode",
+    "PortfolioMetricsNode",
 ]

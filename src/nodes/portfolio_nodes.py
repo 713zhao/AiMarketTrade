@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 import numpy as np
 
-from ..state import (
+from ..models import (
     DeerflowState, RiskAnalysis, PortfolioRiskAnalysis, PortfolioOptimizationResult,
     ScenarioAnalysis, MacroScenario, MarketRegime, MultiScenarioAnalysis,
     RebalancingRule, SignalType, TickerData,

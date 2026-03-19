@@ -6,7 +6,7 @@ import pytest
 from datetime import datetime
 from typing import List
 
-from deerflow_openbb.state import (
+from src.models import (
     DeerflowState,
     TickerData,
     TechnicalAnalysis,

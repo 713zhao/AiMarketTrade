@@ -12,12 +12,8 @@ from openbb import obb
 import pandas as pd
 import numpy as np
 
-from ..state import (
-    DeerflowState,
-    TickerData,
-    DataProvider,
-    get_settings,
-)
+from ..models import DeerflowState, TickerData, DataProvider
+from ..config import get_settings
 from .base import BaseNode
 
 
@@ -233,7 +229,7 @@ class StockDataNode(BaseNode):
             score += 0.2
 
         # Company info (20%)
-        if company_info and len(company_info) > 5:
+        if company_info and len(company_info) > 0:
             score += 0.2
 
         # Financial statements (50%)
