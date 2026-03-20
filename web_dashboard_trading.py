@@ -50,20 +50,143 @@ from src.nodes.trading_nodes import (
 from src.data_fetcher import DataFetcher
 from src.background_scanner import get_scanner
 from src.config import Settings
-from src.market_config import Market, get_market_tickers, get_all_industries
+from src.market_config import Market, get_market_tickers, get_all_industries, is_market_open
 import asyncio
+from datetime import datetime
 
 # Global trading state (simulated portfolio)
 trading_state = None
 data_fetcher = DataFetcher()
 background_scanner = get_scanner()
 current_market = Market.US  # Default market
+active_scanners = {}  # Track scanners for each market: {Market: BackgroundScanner}
+active_markets = []  # List of currently scanning markets
+user_market_override = None  # Track if user manually set market (don't auto-switch)
+
+def get_all_open_markets():
+    """
+    Get all markets that are currently open based on UTC time.
+    
+    Returns:
+        List[Market]: All markets currently open
+    """
+    open_markets = []
+    for market in [Market.US, Market.CHINA, Market.HONGKONG]:
+        if is_market_open(market):
+            open_markets.append(market)
+    return open_markets
+
+def get_open_market():
+    """
+    Determine which market is currently open based on UTC time.
+    Priority: HongKong > China > US
+    
+    Returns:
+        Market: The market that is currently open
+    """
+    # Check in priority order: HongKong, China, US
+    for market in [Market.HONGKONG, Market.CHINA, Market.US]:
+        if is_market_open(market):
+            return market
+    
+    # Fallback to US if no market is open
+    return Market.US
+
+def monitor_and_switch_market():
+    """
+    Monitor market hours and automatically manage scanners for all open markets.
+    Starts scanners for newly opened markets and stops scanners for closed markets.
+    This runs continuously in the background.
+    
+    Respects user_market_override - if user manually sets a market, don't auto-switch it.
+    """
+    global current_market, trading_state, active_scanners, active_markets, user_market_override
+    import time
+    
+    while True:
+        try:
+            # Get all currently open markets
+            open_markets = get_all_open_markets()
+            open_market_set = set(open_markets)
+            active_market_set = set(active_markets)
+            
+            # Find markets that closed
+            closed_markets = active_market_set - open_market_set
+            for market in closed_markets:
+                logger.info(f"Market monitor: Market {market.value} CLOSED - stopping scanner")
+                if market in active_scanners:
+                    scanner = active_scanners[market]
+                    scanner.stop()
+                    del active_scanners[market]
+                if market in active_markets:
+                    active_markets.remove(market)
+                # If the closed market was user-overridden, clear the override
+                if market == user_market_override:
+                    user_market_override = None
+            
+            # Find newly opened markets
+            new_markets = open_market_set - active_market_set
+            for market in new_markets:
+                logger.info(f"Market monitor: Market {market.value} OPENED - starting scanner")
+                scanner = get_scanner()
+                scanner_thread = threading.Thread(
+                    target=scanner.start, 
+                    args=(data_fetcher, market), 
+                    daemon=True
+                )
+                scanner_thread.start()
+                active_scanners[market] = scanner
+                active_markets.append(market)
+            
+            # Update primary market intelligently
+            # If user has manually set a market and it's still open, keep it
+            if user_market_override and user_market_override in open_market_set:
+                # Keep user's choice
+                pass
+            else:
+                # Otherwise, use first open market
+                if open_markets:
+                    new_primary = open_markets[0]
+                    if new_primary != current_market:
+                        logger.info(f"Market monitor: Primary market switched to {new_primary.value}")
+                        current_market = new_primary
+                        
+                        # Update trading state with primary market tickers
+                        if trading_state:
+                            tickers = get_market_tickers(new_primary)
+                            trading_state.tickers = tickers
+                        trading_state.ticker_data = {}
+            
+            # Log current status
+            if active_markets:
+                logger.debug(f"Market monitor: Currently scanning {len(active_markets)} market(s): {', '.join(m.value for m in active_markets)}")
+            
+            # Check every minute
+            time.sleep(60)
+        
+        except Exception as e:
+            logger.error(f"Error in market monitor: {e}")
+            import time
+            time.sleep(60)
 
 def initialize_trading_state():
     """Initialize a sample trading state for demonstration using market-specific tickers."""
-    global trading_state, current_market
+    global trading_state, current_market, active_scanners, active_markets
     
-    # Get tickers for current market
+    # Get all currently open markets
+    open_markets = get_all_open_markets()
+    utc_hour = datetime.utcnow().hour
+    
+    if open_markets:
+        # Set primary market as first open market
+        current_market = open_markets[0]
+        logger.info(f"UTC Hour: {utc_hour} - Open markets: {', '.join(m.value for m in open_markets)}")
+    else:
+        current_market = Market.US
+        open_markets = [Market.US]
+        logger.info(f"UTC Hour: {utc_hour} - No markets open, defaulting to US")
+    
+    # Get tickers for primary market
     tickers = get_market_tickers(current_market)
     
     trading_state = DeerflowState(
@@ -80,12 +203,26 @@ def initialize_trading_state():
             "commission_pct": 0.0001,
         },
     )
-    logger.info(f"Trading state initialized for {current_market.value} market with {len(tickers)} tickers: {tickers}")
+    logger.info(f"Trading state initialized with primary market {current_market.value} and {len(tickers)} tickers")
     
-    # Start background scanner in a separate thread (non-blocking) with market support
-    scanner_thread = threading.Thread(target=background_scanner.start, args=(data_fetcher, current_market), daemon=True)
-    scanner_thread.start()
-    logger.info("Background scanner started in background thread")
+    # Start background scanners for ALL open markets
+    logger.info(f"Starting background scanners for {len(open_markets)} open market(s)...")
+    for market in open_markets:
+        scanner = get_scanner()
+        scanner_thread = threading.Thread(
+            target=scanner.start, 
+            args=(data_fetcher, market), 
+            daemon=True
+        )
+        scanner_thread.start()
+        active_scanners[market] = scanner
+        active_markets.append(market)
+        logger.info(f"  - Scanner started for {market.value} market")
+    
+    # Start market monitor thread to manage markets as they open/close
+    monitor_thread = threading.Thread(target=monitor_and_switch_market, daemon=True)
+    monitor_thread.start()
+    logger.info(f"Market monitor started - managing {len(active_markets)} active market(s)")
 
 @app.route('/')
 def index():
@@ -95,19 +232,35 @@ def index():
 @app.route('/api/market')
 def get_current_market():
     """Get current market and available markets."""
+    open_markets = []
+    for market in Market:
+        if is_market_open(market):
+            open_markets.append(market.value)
+    
+    actively_scanning = [m.value for m in active_markets]
+    
     return jsonify({
         "current_market": current_market.value,
+        "primary_market": current_market.value,
         "available_markets": [m.value for m in Market],
+        "open_markets": open_markets,
+        "actively_scanning": actively_scanning,
+        "num_active_scanners": len(active_scanners),
+        "utc_hour": datetime.utcnow().hour,
+        "market_hours": {
+            "US": "13-21 UTC (9:30 AM - 4:00 PM EST)",
+            "CHINA": "0-9 UTC (9:30 AM - 3:00 PM CST)",
+            "HONGKONG": "1-10 UTC (9:30 AM - 4:00 PM HKT)"
+        }
     })
 
 @app.route('/api/market/set/<market_name>', methods=['POST'])
 def set_market(market_name: str):
-    """Change trading market and update tickers."""
-    global current_market, trading_state, background_scanner
+    """Change primary trading market and update tickers."""
+    global current_market, trading_state, active_scanners, active_markets, user_market_override
     
     try:
         market = Market(market_name.upper())
-        current_market = market
         
         # Get default tickers for the market
         tickers = get_market_tickers(market)
@@ -121,23 +274,31 @@ def set_market(market_name: str):
             trading_state.consensus_signals = {}
             trading_state.cash_balance = 100000.0  # Reset cash
         
-        # Restart background scanner with new market
-        if background_scanner.is_running:
-            background_scanner.stop()
+        # Set as primary market
+        current_market = market
+        user_market_override = market  # Store user's choice so monitor doesn't override it
         
-        background_scanner.market = market
-        background_scanner.enabled_industries = get_all_industries(market)
-        scanner_thread = threading.Thread(target=background_scanner.start, args=(data_fetcher, market), daemon=True)
-        scanner_thread.start()
+        # If market is not already being scanned, start a scanner for it
+        if market not in active_scanners:
+            logger.info(f"Starting scanner for user-selected market: {market.value}")
+            scanner = get_scanner()
+            scanner_thread = threading.Thread(
+                target=scanner.start, 
+                args=(data_fetcher, market), 
+                daemon=True
+            )
+            scanner_thread.start()
+            active_scanners[market] = scanner
+            if market not in active_markets:
+                active_markets.append(market)
         
-        logger.info(f"Market switched to {market.value}: {', '.join(tickers)}")
-        logger.info(f"Background scanner restarted for {market.value} market")
+        logger.info(f"Primary market set to {market.value}: {', '.join(tickers)}")
         
         return jsonify({
             "success": True,
             "market": market.value,
             "tickers": tickers,
-            "message": f"Switched to {market.value} market with {len(tickers)} tickers"
+            "message": f"Primary market set to {market.value} with {len(tickers)} tickers"
         })
     except ValueError:
         return jsonify({
@@ -646,9 +807,15 @@ def deep_analysis_candidates(candidates: list, industry: str, config) -> list:
 
 @app.route('/api/scanner/status')
 def scanner_status():
-    """Get background scanner status."""
+    """Get background scanner status for current primary market."""
     try:
-        status = background_scanner.get_status()
+        # Use scanner for current primary market
+        if current_market in active_scanners:
+            scanner = active_scanners[current_market]
+            status = scanner.get_status()
+        else:
+            # Fallback: create default status if no scanner active
+            status = {"market": current_market.value, "is_running": False}
         return jsonify(status)
     except Exception as e:
         logger.error(f"Error getting scanner status: {e}")
@@ -656,27 +823,39 @@ def scanner_status():
 
 @app.route('/api/scanner/industries', methods=['GET', 'POST'])
 def manage_industries():
-    """Get or set enabled industries for scanner."""
+    """Get or set enabled industries for all scanners."""
     try:
         if request.method == 'POST':
             data = request.get_json()
             industries = data.get('industries', [])
-            background_scanner.set_enabled_industries(industries)
+            # Update industries for all active scanners
+            for scanner in active_scanners.values():
+                scanner.set_enabled_industries(industries)
             return jsonify({"success": True, "industries": industries})
         else:
-            return jsonify({"industries": background_scanner.enabled_industries})
+            # Get industries from primary market scanner
+            if current_market in active_scanners:
+                industries = active_scanners[current_market].enabled_industries
+            else:
+                industries = []
+            return jsonify({"industries": industries})
     except Exception as e:
         logger.error(f"Error managing industries: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/scanner/recommendations/<industry>')
 def get_recommendations(industry):
-    """Get trading recommendations for an industry."""
+    """Get trading recommendations for an industry from primary market scanner."""
     try:
         signal_type = request.args.get('signal', 'BUY')
         min_score = int(request.args.get('min_score', 2))
         
-        recommendations = background_scanner.get_recommendations(industry, signal_type, min_score)
+        # Get recommendations from primary market scanner
+        if current_market in active_scanners:
+            scanner = active_scanners[current_market]
+            recommendations = scanner.get_recommendations(industry, signal_type, min_score)
+        else:
+            recommendations = []
         
         return jsonify({
             "industry": industry,
@@ -690,14 +869,26 @@ def get_recommendations(industry):
 
 @app.route('/api/scanner/all-results/<industry>')
 def get_all_results(industry):
-    """Get ALL scan results for an industry (no filtering)."""
+    """Get ALL scan results for an industry from primary market scanner."""
     try:
-        # Try to get from memory first, then fallback to file
-        results = background_scanner.get_all_results(industry)
+        results = []
+        last_updated = None
         
-        # If still empty, try loading from file directly
+        # Get results from primary market scanner
+        if current_market in active_scanners:
+            scanner = active_scanners[current_market]
+            results = scanner.get_all_results(industry)
+            last_updated = scanner.last_scan_time.get(industry)
+        
+        # If still empty, try loading from file directly with market-specific filename
         if not results:
-            file_path = Path("scan_results") / f"{industry}_scan.json"
+            market_prefix = current_market.value.lower()
+            file_path = Path("scan_results") / f"{market_prefix}_{industry}_scan.json"
+            
+            # Fallback to old filename format if market-specific file doesn't exist
+            if not file_path.exists():
+                file_path = Path("scan_results") / f"{industry}_scan.json"
+            
             if file_path.exists():
                 with open(file_path, 'r') as f:
                     data = json.load(f)
@@ -707,13 +898,14 @@ def get_all_results(industry):
         buy_count = len([r for r in results if r.get("recommendation") == "BUY"])
         sell_count = len([r for r in results if r.get("recommendation") == "SELL"])
         hold_count = len([r for r in results if r.get("recommendation") == "HOLD"])
-        logger.info(f"Returning {len(results)} results for {industry}: {buy_count} BUY, {sell_count} SELL, {hold_count} HOLD")
+        logger.info(f"Returning {len(results)} results for {industry}: {buy_count} BUY, {sell_count} SELL, {hold_count} HOLD from {current_market.value}")
         
         return jsonify({
             "industry": industry,
             "results": results,
             "count": len(results),
-            "last_updated": background_scanner.last_scan_time.get(industry)
+            "market": current_market.value,
+            "last_updated": last_updated
         })
     except Exception as e:
         logger.error(f"Error getting all results for {industry}: {e}")
@@ -812,14 +1004,22 @@ def get_stock_data(ticker):
 
 @app.route('/api/scanner/scan-tables/<industry>')
 def get_scan_table(industry):
-    """Get formatted scan table for a specific industry."""
+    """Get formatted scan table for a specific industry from primary market scanner."""
     try:
-        table = background_scanner.get_scan_table(industry)
+        table = {}
+        last_updated = None
+        
+        if current_market in active_scanners:
+            scanner = active_scanners[current_market]
+            table = scanner.get_scan_table(industry)
+            last_updated = scanner.last_scan_time.get(industry)
+        
         return jsonify({
             "success": True,
             "industry": industry,
+            "market": current_market.value,
             "table": table,
-            "last_updated": background_scanner.last_scan_time.get(industry)
+            "last_updated": last_updated
         })
     except Exception as e:
         logger.error(f"Error getting scan table for {industry}: {e}")
@@ -827,14 +1027,24 @@ def get_scan_table(industry):
 
 @app.route('/api/scanner/all-scan-tables')
 def get_all_scan_tables():
-    """Get formatted scan tables for all industries."""
+    """Get formatted scan tables for all industries from primary market scanner."""
     try:
-        all_tables = background_scanner.get_scan_table()
+        all_tables = {}
+        industries = []
+        last_updated = {}
+        
+        if current_market in active_scanners:
+            scanner = active_scanners[current_market]
+            all_tables = scanner.get_scan_table()
+            industries = scanner.enabled_industries
+            last_updated = scanner.last_scan_time
+        
         return jsonify({
             "success": True,
+            "market": current_market.value,
             "tables": all_tables,
-            "industries": background_scanner.enabled_industries,
-            "last_updated": background_scanner.last_scan_time
+            "industries": industries,
+            "last_updated": last_updated
         })
     except Exception as e:
         logger.error(f"Error getting all scan tables: {e}")

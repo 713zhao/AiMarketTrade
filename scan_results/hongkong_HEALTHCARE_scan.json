@@ -1,0 +1,53 @@
+{
+  "industry": "HEALTHCARE",
+  "market": "HONGKONG",
+  "timestamp": "2026-03-20T17:28:35.277495",
+  "results": [
+    {
+      "ticker": "1177.HK",
+      "timestamp": "2026-03-20T17:28:34.204753",
+      "company_name": "Sino Biopharmaceutical Limited",
+      "price": 5.980000019073486,
+      "volume": 44994301,
+      "market_cap": 107004092416,
+      "pe_ratio": 23.92,
+      "rsi": 53.28947058840138,
+      "rsi_signal": "NEUTRAL",
+      "volume_spike_ratio": 0.6532906633270681,
+      "has_volume_spike": false,
+      "macd": -0.10011729651577372,
+      "signal": -0.11725987156897551,
+      "histogram": 0.017142575053201783,
+      "buy_signal": false,
+      "sell_signal": false,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "1211.HK",
+      "timestamp": "2026-03-20T17:28:34.956787",
+      "company_name": "BYD Company Limited",
+      "price": 103.80000305175781,
+      "volume": 38792388,
+      "market_cap": 946365136896,
+      "pe_ratio": 65.28302,
+      "rsi": 58.57664543524416,
+      "rsi_signal": "NEUTRAL",
+      "volume_spike_ratio": 1.1700684650559072,
+      "has_volume_spike": false,
+      "macd": 1.7145194819064073,
+      "signal": 0.9364740034391981,
+      "histogram": 0.7780454784672093,
+      "buy_signal": false,
+      "sell_signal": false,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "industry": "TELECOM",
+  "market": "HONGKONG",
+  "timestamp": "2026-03-20T17:28:36.895152",
+  "results": [
+    {
+      "ticker": "2888.HK",
+      "timestamp": "2026-03-20T17:28:36.539933",
+      "company_name": "Standard Chartered PLC",
+      "price": 162.5,
+      "volume": 1197349,
+      "market_cap": 361925738496,
+      "pe_ratio": 10.94276,
+      "rsi": 29.519179702788605,
+      "rsi_signal": "OVERSOLD",
+      "volume_spike_ratio": 0.6105190188212514,
+      "has_volume_spike": false,
+      "macd": -7.529640472426138,
+      "signal": -6.28770109324241,
+      "histogram": -1.2419393791837274,
+      "buy_signal": false,
+      "sell_signal": false,
+      "buy_score": 2,
+      "sell_score": 0,
+      "recommendation": "BUY",
+      "reason": "RSI Oversold(+2)",
+      "reasons": [
+        "RSI Oversold(+2)"
+      ]
+    },
+    {
+      "ticker": "0941.HK",
+      "timestamp": "2026-03-20T17:28:35.702456",
+      "company_name": "China Mobile Limited",
+      "price": 78.80000305175781,
+      "volume": 30131279,
+      "market_cap": 1725022994432,
+      "pe_ratio": 10.563003,
+      "rsi": 51.5789710386788,
+      "rsi_signal": "NEUTRAL",
+      "volume_spike_ratio": 1.663191668345345,
+      "has_volume_spike": true,
+      "macd": 0.09705685289912935,
+      "signal": 0.003963022771121961,
+      "histogram": 0.0930938301280074,
+      "buy_signal": false,
+      "sell_signal": false,
+      "buy_score": 1,
+      "sell_score": 0,
+      "recommendation": "BUY",
+      "reason": "Volume Spike(+1)",
+      "reasons": [
+        "Volume Spike(+1)"
+      ]
+    }
+  ]
+}

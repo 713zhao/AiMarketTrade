@@ -101,12 +101,15 @@ class BackgroundScanner:
                 time.sleep(10)  # Wait before retrying
     
     def _save_results_to_file(self, industry: str, results: List[Dict]):
-        """Save scan results to JSON file"""
+        """Save scan results to JSON file with market-specific naming"""
         try:
-            file_path = self.results_dir / f"{industry}_scan.json"
+            # Include market name in filename to avoid conflicts when multiple markets scan
+            market_prefix = self.market.value.lower()
+            file_path = self.results_dir / f"{market_prefix}_{industry}_scan.json"
             with open(file_path, 'w') as f:
                 json.dump({
                     "industry": industry,
+                    "market": self.market.value,
                     "timestamp": datetime.now().isoformat(),
                     "results": results
                 }, f, indent=2)

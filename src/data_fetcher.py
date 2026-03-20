@@ -45,10 +45,14 @@ class DataFetcher:
             price = float(current["Close"])
             volume = int(current.get("Volume", 0))
             
-            logger.info(f"✓ {ticker}: Price=${price:.2f}, Volume={volume:,}, Market Cap=${info.get('marketCap', 'N/A')}")
+            # Get company name
+            company_name = info.get("longName", ticker)
+            
+            logger.info(f"✓ {ticker}: {company_name} - Price=${price:.2f}, Volume={volume:,}, Market Cap=${info.get('marketCap', 'N/A')}")
             
             return {
                 "ticker": ticker,
+                "company_name": company_name,  # NEW: Add company name
                 "price": price,
                 "volume": volume,
                 "timestamp": datetime.now().isoformat(),

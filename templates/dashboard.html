@@ -794,7 +794,7 @@
                                 <div style="margin-top: 1rem; background: #d4edda; padding: 1rem; border-radius: 6px;">
                                     <strong style="color: #155724;">Top Buy Signals:</strong>
                                     <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
-                                        ${report.top_buys.slice(0, 3).map(s => `<li>${s.ticker}: $${s.price.toFixed(2)} (Score: ${s.buy_score})</li>`).join('')}
+                                        ${report.top_buys.slice(0, 3).map(s => `<li>${s.company_name ? `${s.company_name} (${s.ticker})` : s.ticker}: $${s.price.toFixed(2)} (Score: ${s.buy_score})</li>`).join('')}
                                     </ul>
                                 </div>
                             ` : ''}
@@ -1080,13 +1080,14 @@
                             html += '<p style="color: #7f8c8d;">No recommendations at the moment</p>';
                         } else {
                             html += '<table style="width: 100%; border-collapse: collapse;">';
-                            html += '<thead style="background: #f0f0f0;"><tr><th style="padding: 0.75rem; text-align: left;">Ticker</th><th>Price</th><th>RSI</th><th>Score</th><th>Signal</th></tr></thead>';
+                            html += '<thead style="background: #f0f0f0;"><tr><th style="padding: 0.75rem; text-align: left;">Stock</th><th>Price</th><th>RSI</th><th>Score</th><th>Signal</th></tr></thead>';
                             html += '<tbody>';
                             recData.recommendations.slice(0, 10).forEach(rec => {
                                 const signalBg = rec.recommendation === 'BUY' ? '#d4edda' : rec.recommendation === 'SELL' ? '#f8d7da' : '#e2e3e5';
                                 const signalColor = rec.recommendation === 'BUY' ? '#155724' : rec.recommendation === 'SELL' ? '#721c24' : '#383d41';
+                                const tickerDisplay = rec.company_name ? `${rec.company_name}<br/><small style="color: #7f8c8d;">(${rec.ticker})</small>` : rec.ticker;
                                 html += `<tr style="border-bottom: 1px solid #ddd;">`;
-                                html += `<td style="padding: 0.75rem;"><strong>${rec.ticker}</strong></td>`;
+                                html += `<td style="padding: 0.75rem;"><strong>${tickerDisplay}</strong></td>`;
                                 html += `<td>${formatCurrency(rec.price)}</td>`;
                                 html += `<td>${rec.rsi ? rec.rsi.toFixed(2) : 'N/A'}</td>`;
                                 html += `<td><span style="background: ${signalBg}; color: ${signalColor}; padding: 0.25rem 0.75rem; border-radius: 4px; font-weight: 600;">${rec.buy_score}</span></td>`;
@@ -1113,7 +1114,7 @@
                         } else {
                             lastScanHtml += '<table style="width: 100%; border-collapse: collapse;">';
                             lastScanHtml += '<thead style="background: #f0f0f0;"><tr>';
-                            lastScanHtml += '<th style="padding: 0.75rem; text-align: left;">Ticker</th>';
+                            lastScanHtml += '<th style="padding: 0.75rem; text-align: left;">Stock</th>';
                             lastScanHtml += '<th style="padding: 0.75rem; text-align: left;">Price</th>';
                             lastScanHtml += '<th style="padding: 0.75rem; text-align: left;">RSI</th>';
                             lastScanHtml += '<th style="padding: 0.75rem; text-align: left;">Status</th>';
@@ -1141,8 +1142,9 @@
                                     reason = 'No Strong Signals';
                                 }
                                 
+                                const tickerDisplay = rec.company_name ? `${rec.company_name}<br/><small style="color: #7f8c8d;">(${rec.ticker})</small>` : rec.ticker;
                                 lastScanHtml += `<tr style="border-bottom: 1px solid #ddd;">`;
-                                lastScanHtml += `<td style="padding: 0.75rem;"><strong>${rec.ticker}</strong></td>`;
+                                lastScanHtml += `<td style="padding: 0.75rem;"><strong>${tickerDisplay}</strong></td>`;
                                 lastScanHtml += `<td style="padding: 0.75rem;">${formatCurrency(rec.price)}</td>`;
                                 lastScanHtml += `<td style="padding: 0.75rem;">${rec.rsi ? rec.rsi.toFixed(2) : 'N/A'}</td>`;
                                 lastScanHtml += `<td style="padding: 0.75rem; font-size: 0.875rem;">${rsiStatus}</td>`;
@@ -1304,7 +1306,7 @@
                 html += `<table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; font-size: 0.9rem;">`;
                 html += `<thead style="background: #495057; color: white;">`;
                 html += `<tr>
-                    <th style="padding: 0.75rem; text-align: left;">Ticker</th>
+                    <th style="padding: 0.75rem; text-align: left;">Stock</th>
                     <th style="padding: 0.75rem;">Price</th>
                     <th style="padding: 0.75rem;">RSI</th>
                     <th style="padding: 0.75rem;">Status</th>
@@ -1324,9 +1326,10 @@
                     const priceStr = stock.price ? `$${parseFloat(stock.price).toFixed(2)}` : 'N/A';
                     const rsiStr = stock.rsi !== null ? stock.rsi.toFixed(2) : 'N/A';
                     const reasonStr = stock.reasons && stock.reasons.length > 0 ? stock.reasons.join(' | ') : 'No signals';
+                    const tickerDisplay = stock.company_name ? `${stock.company_name}<br/><small style="color: #7f8c8d;">(${stock.ticker})</small>` : stock.ticker;
                     
                     html += `<tr style="background: ${rowBg}; border-bottom: 1px solid #dee2e6;">`;
-                    html += `<td style="padding: 0.75rem; font-weight: 600;">${passedFilter}<strong>${stock.ticker}</strong></td>`;
+                    html += `<td style="padding: 0.75rem; font-weight: 600;">${passedFilter}<strong>${tickerDisplay}</strong></td>`;
                     html += `<td style="padding: 0.75rem; text-align: center;">${priceStr}</td>`;
                     html += `<td style="padding: 0.75rem; text-align: center;">${rsiStr}</td>`;
                     html += `<td style="padding: 0.75rem; text-align: center;">
@@ -1357,7 +1360,7 @@
                 html += `<table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">`;
                 html += `<thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">`;
                 html += `<tr>
-                    <th style="padding: 1rem; text-align: left;">Ticker</th>
+                    <th style="padding: 1rem; text-align: left;">Stock</th>
                     <th>Price</th>
                     <th>Quick Score</th>
                     <th>Deep Score</th>
@@ -1369,8 +1372,9 @@
                 results.forEach(rec => {
                     const signalBg = rec.signal === 'BUY' ? '#28a745' : rec.signal === 'SELL' ? '#dc3545' : '#ffc107';
                     const signalText = rec.signal === 'BUY' ? '🟢 BUY' : rec.signal === 'SELL' ? '🔴 SELL' : '⚪ HOLD';
+                    const tickerDisplay = rec.company_name ? `${rec.company_name}<br/><small style="color: #7f8c8d;">(${rec.ticker})</small>` : rec.ticker;
                     html += `<tr style="border-bottom: 1px solid #eee; hover: background #f9f9f9;">`;
-                    html += `<td style="padding: 1rem;"><strong>${rec.ticker}</strong></td>`;
+                    html += `<td style="padding: 1rem;"><strong>${tickerDisplay}</strong></td>`;
                     html += `<td>$${parseFloat(rec.price).toFixed(2)}</td>`;
                     html += `<td><span style="background: #e7f3ff; padding: 0.5rem 0.75rem; border-radius: 4px;">${rec.quick_score.toFixed(1)}/5</span></td>`;
                     html += `<td><span style="background: #fff3cd; padding: 0.5rem 0.75rem; border-radius: 4px;">${rec.deep_score.toFixed(1)}/10</span></td>`;
