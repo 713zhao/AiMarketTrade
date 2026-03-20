@@ -1,0 +1,25 @@
+{
+  "industry": "POWER",
+  "market": "US",
+  "timestamp": "2026-03-21T00:49:02.856371",
+  "results": [
+    {
+      "ticker": "XEL",
+      "price": 78.01000213623047,
+      "quick_score": 2,
+      "deep_score": 4.20046362174072,
+      "signal": "BUY",
+      "recommendation": "BUY",
+      "confidence": "HIGH",
+      "buy_score": 2,
+      "sell_score": 0,
+      "rsi": 20.659448273952876,
+      "rsi_status": "OVERSOLD",
+      "volume_spike": 0.420709047060865,
+      "reasons": [
+        "RSI21\u2193"
+      ],
+      "reason": "Both quick (2/5) and deep (4.2/10) methods agree"
+    }
+  ]
+}

@@ -86,14 +86,28 @@ class DataFetcher:
                 logger.warning(f"Insufficient data for {ticker}: only {len(data)} days")
                 return None
             
+            # Handle both single and multi-index column structures
+            close_col = ("Close", ticker) if ("Close", ticker) in data.columns else "Close"
+            close_data = data[close_col]
+            
             # Calculate RSI
-            delta = data["Close"].diff()
+            delta = close_data.diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
             
             rs = gain / loss
             rsi = 100 - (100 / (1 + rs))
-            current_rsi = float(rsi.iloc[-1])
+            
+            # Extract the last valid RSI value
+            last_rsi_val = rsi.dropna().iloc[-1] if len(rsi.dropna()) > 0 else None
+            if last_rsi_val is None:
+                return None
+            
+            # Handle Series to scalar conversion
+            if isinstance(last_rsi_val, pd.Series):
+                current_rsi = float(last_rsi_val.iloc[0]) if len(last_rsi_val) > 0 else float(last_rsi_val)
+            else:
+                current_rsi = float(last_rsi_val)
             
             # Determine signal
             if current_rsi > 70:
@@ -119,8 +133,23 @@ class DataFetcher:
             if len(data) < days:
                 return None
             
-            recent_volume = float(data["Volume"].iloc[-1])
-            avg_volume = float(data["Volume"].iloc[-days:-1].mean())
+            # Handle both single and multi-index column structures
+            volume_col = ("Volume", ticker) if ("Volume", ticker) in data.columns else "Volume"
+            volume_data = data[volume_col]
+            
+            recent_volume_val = volume_data.iloc[-1]
+            avg_volume_val = volume_data.iloc[-days:-1].mean()
+            
+            # Handle Series to scalar conversion
+            if isinstance(recent_volume_val, pd.Series):
+                recent_volume = float(recent_volume_val.iloc[0]) if len(recent_volume_val) > 0 else float(recent_volume_val)
+            else:
+                recent_volume = float(recent_volume_val) if recent_volume_val else 0
+            
+            if isinstance(avg_volume_val, pd.Series):
+                avg_volume = float(avg_volume_val.iloc[0]) if len(avg_volume_val) > 0 else float(avg_volume_val)
+            else:
+                avg_volume = float(avg_volume_val) if avg_volume_val else 1
             
             spike_ratio = recent_volume / avg_volume if avg_volume > 0 else 1
             has_spike = spike_ratio > 1.5
@@ -142,18 +171,40 @@ class DataFetcher:
             if len(data) < 26:
                 return None
             
-            exp1 = data["Close"].ewm(span=12).mean()
-            exp2 = data["Close"].ewm(span=26).mean()
+            # Handle both single and multi-index column structures
+            close_col = ("Close", ticker) if ("Close", ticker) in data.columns else "Close"
+            close_data = data[close_col]
+            
+            exp1 = close_data.ewm(span=12).mean()
+            exp2 = close_data.ewm(span=26).mean()
             macd = exp1 - exp2
             signal = macd.ewm(span=9).mean()
             histogram = macd - signal
             
+            # Extract scalar values safely
+            macd_last = macd.iloc[-1]
+            signal_last = signal.iloc[-1]
+            histogram_last = histogram.iloc[-1]
+            histogram_prev = histogram.iloc[-2]
+            
+            # Handle Series to scalar conversion
+            if isinstance(macd_last, pd.Series):
+                macd_val = float(macd_last.iloc[0]) if len(macd_last) > 0 else 0
+                signal_val = float(signal_last.iloc[0]) if len(signal_last) > 0 else 0
+                histogram_val = float(histogram_last.iloc[0]) if len(histogram_last) > 0 else 0
+                histogram_prev_val = float(histogram_prev.iloc[0]) if len(histogram_prev) > 0 else 0
+            else:
+                macd_val = float(macd_last)
+                signal_val = float(signal_last)
+                histogram_val = float(histogram_last)
+                histogram_prev_val = float(histogram_prev)
+            
             return {
-                "macd": float(macd.iloc[-1]),
-                "signal": float(signal.iloc[-1]),
-                "histogram": float(histogram.iloc[-1]),
-                "buy_signal": float(histogram.iloc[-1]) > 0 and float(histogram.iloc[-2]) <= 0,
-                "sell_signal": float(histogram.iloc[-1]) < 0 and float(histogram.iloc[-2]) >= 0,
+                "macd": macd_val,
+                "signal": signal_val,
+                "histogram": histogram_val,
+                "buy_signal": histogram_val > 0 and histogram_prev_val <= 0,
+                "sell_signal": histogram_val < 0 and histogram_prev_val >= 0,
             }
         except Exception as e:
             logger.error(f"Error calculating MACD for {ticker}: {e}")

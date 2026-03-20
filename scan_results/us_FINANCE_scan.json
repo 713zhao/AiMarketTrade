@@ -1,0 +1,61 @@
+{
+  "industry": "FINANCE",
+  "market": "US",
+  "timestamp": "2026-03-21T00:49:16.326495",
+  "results": [
+    {
+      "ticker": "JPM",
+      "price": 289.4200134277344,
+      "quick_score": 2,
+      "deep_score": 3.8176308544363984,
+      "signal": "BUY",
+      "recommendation": "BUY",
+      "confidence": "HIGH",
+      "buy_score": 2,
+      "sell_score": 0,
+      "rsi": 34.83349319802713,
+      "rsi_status": "NEUTRAL",
+      "volume_spike": 0.4900578401128071,
+      "reasons": [
+        "MACD\u2191"
+      ],
+      "reason": "Both quick (2/5) and deep (3.8/10) methods agree"
+    },
+    {
+      "ticker": "MS",
+      "price": 161.8300018310547,
+      "quick_score": 2,
+      "deep_score": 3.6928388067328757,
+      "signal": "BUY",
+      "recommendation": "BUY",
+      "confidence": "HIGH",
+      "buy_score": 2,
+      "sell_score": 0,
+      "rsi": 39.71240265075682,
+      "rsi_status": "NEUTRAL",
+      "volume_spike": 0.6728698531857743,
+      "reasons": [
+        "MACD\u2191"
+      ],
+      "reason": "Both quick (2/5) and deep (3.7/10) methods agree"
+    },
+    {
+      "ticker": "BLK",
+      "price": 961.1099853515625,
+      "quick_score": 2,
+      "deep_score": 3.8161602874749354,
+      "signal": "BUY",
+      "recommendation": "BUY",
+      "confidence": "HIGH",
+      "buy_score": 2,
+      "sell_score": 0,
+      "rsi": 27.382057033072115,
+      "rsi_status": "OVERSOLD",
+      "volume_spike": 0.3565972290458878,
+      "reasons": [
+        "RSI27\u2193"
+      ],
+      "reason": "Both quick (2/5) and deep (3.8/10) methods agree"
+    }
+  ]
+}

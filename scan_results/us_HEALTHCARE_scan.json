@@ -1,0 +1,79 @@
+{
+  "industry": "HEALTHCARE",
+  "market": "US",
+  "timestamp": "2026-03-21T00:49:09.922788",
+  "results": [
+    {
+      "ticker": "JNJ",
+      "price": 235.9499969482422,
+      "quick_score": 2,
+      "deep_score": 4.413456562671777,
+      "signal": "BUY",
+      "recommendation": "BUY",
+      "confidence": "HIGH",
+      "buy_score": 2,
+      "sell_score": 0,
+      "rsi": 24.52526699781815,
+      "rsi_status": "OVERSOLD",
+      "volume_spike": 0.6498245044713312,
+      "reasons": [
+        "RSI25\u2193"
+      ],
+      "reason": "Both quick (2/5) and deep (4.4/10) methods agree"
+    },
+    {
+      "ticker": "PFE",
+      "price": 26.989999771118164,
+      "quick_score": 2,
+      "deep_score": 3.715111543005118,
+      "signal": "SELL",
+      "recommendation": "SELL",
+      "confidence": "HIGH",
+      "buy_score": 0,
+      "sell_score": 2,
+      "rsi": 46.61948859709744,
+      "rsi_status": "NEUTRAL",
+      "volume_spike": 0.4573056148407193,
+      "reasons": [
+        "MACD\u2193"
+      ],
+      "reason": "Both quick (2/5) and deep (3.7/10) methods agree"
+    },
+    {
+      "ticker": "LLY",
+      "price": 917.8300170898438,
+      "quick_score": 2,
+      "deep_score": 3.650597593839239,
+      "signal": "BUY",
+      "recommendation": "BUY",
+      "confidence": "HIGH",
+      "buy_score": 2,
+      "sell_score": 0,
+      "rsi": 21.43674360069093,
+      "rsi_status": "OVERSOLD",
+      "volume_spike": 0.5039517105524732,
+      "reasons": [
+        "RSI21\u2193"
+      ],
+      "reason": "Both quick (2/5) and deep (3.7/10) methods agree"
+    },
+    {
+      "ticker": "AZN",
+      "price": 184.5,
+      "quick_score": 2,
+      "deep_score": 3.7615792936875447,
+      "signal": "BUY",
+      "recommendation": "BUY",
+      "confidence": "HIGH",
+      "buy_score": 2,
+      "sell_score": 0,
+      "rsi": 13.033449079573927,
+      "rsi_status": "OVERSOLD",
+      "volume_spike": 0.6583729476953886,
+      "reasons": [
+        "RSI13\u2193"
+      ],
+      "reason": "Both quick (2/5) and deep (3.8/10) methods agree"
+    }
+  ]
+}

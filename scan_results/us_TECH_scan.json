@@ -1,0 +1,25 @@
+{
+  "industry": "TECH",
+  "market": "US",
+  "timestamp": "2026-03-21T00:48:54.004035",
+  "results": [
+    {
+      "ticker": "META",
+      "price": 594.2000122070312,
+      "quick_score": 2,
+      "deep_score": 4.374304930014404,
+      "signal": "BUY",
+      "recommendation": "BUY",
+      "confidence": "HIGH",
+      "buy_score": 2,
+      "sell_score": 0,
+      "rsi": 28.34386241756421,
+      "rsi_status": "OVERSOLD",
+      "volume_spike": 0.6876917769329569,
+      "reasons": [
+        "RSI28\u2193"
+      ],
+      "reason": "Both quick (2/5) and deep (4.4/10) methods agree"
+    }
+  ]
+}

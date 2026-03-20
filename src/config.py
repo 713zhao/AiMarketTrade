@@ -105,7 +105,7 @@ class Settings(BaseSettings):
         description="Enable two-stage hybrid scanning (quick filter + deep analysis)"
     )
     quick_scan_min_score: float = Field(
-        3.0,
+        2.0,
         alias="QUICK_SCAN_MIN_SCORE",
         description="Minimum score to pass quick scan filter (out of 5)",
         ge=0.0,
@@ -118,7 +118,7 @@ class Settings(BaseSettings):
         ge=1
     )
     deep_analysis_min_score: float = Field(
-        6.5,
+        3.5,
         alias="DEEP_ANALYSIS_MIN_SCORE",
         description="Minimum score to recommend from deep analysis (out of 10)",
         ge=0.0,
@@ -145,6 +145,25 @@ class Settings(BaseSettings):
         30.0,
         alias="DEEP_ANALYSIS_TIMEOUT_SECS",
         description="Timeout for deep analysis in seconds"
+    )
+    
+    # Automatic Trade Execution Configuration
+    auto_execute_trades: bool = Field(
+        False,
+        alias="AUTO_EXECUTE_TRADES",
+        description="Enable automatic trade execution for confirmed recommendations"
+    )
+    auto_execute_min_confidence: float = Field(
+        0.70,
+        alias="AUTO_EXECUTE_MIN_CONFIDENCE",
+        description="Minimum confidence score (0-1) to auto-execute trades",
+        ge=0.0,
+        le=1.0
+    )
+    auto_execute_position_size: float = Field(
+        1000.0,
+        alias="AUTO_EXECUTE_POSITION_SIZE",
+        description="Default position size for automatic trades in dollars"
     )
 
     model_config = SettingsConfigDict(

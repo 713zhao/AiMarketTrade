@@ -1,0 +1,43 @@
+{
+  "industry": "AI",
+  "market": "US",
+  "timestamp": "2026-03-21T00:48:45.445140",
+  "results": [
+    {
+      "ticker": "NFLX",
+      "price": 91.2699966430664,
+      "quick_score": 2,
+      "deep_score": 4.133308559150452,
+      "signal": "BUY",
+      "recommendation": "BUY",
+      "confidence": "HIGH",
+      "buy_score": 2,
+      "sell_score": 0,
+      "rsi": 27.024895777755674,
+      "rsi_status": "OVERSOLD",
+      "volume_spike": 0.3652562174451904,
+      "reasons": [
+        "RSI27\u2193"
+      ],
+      "reason": "Both quick (2/5) and deep (4.1/10) methods agree"
+    },
+    {
+      "ticker": "META",
+      "price": 594.219970703125,
+      "quick_score": 2,
+      "deep_score": 4.343196001650114,
+      "signal": "BUY",
+      "recommendation": "BUY",
+      "confidence": "HIGH",
+      "buy_score": 2,
+      "sell_score": 0,
+      "rsi": 28.333412114786825,
+      "rsi_status": "OVERSOLD",
+      "volume_spike": 0.6876112609744399,
+      "reasons": [
+        "RSI28\u2193"
+      ],
+      "reason": "Both quick (2/5) and deep (4.3/10) methods agree"
+    }
+  ]
+}

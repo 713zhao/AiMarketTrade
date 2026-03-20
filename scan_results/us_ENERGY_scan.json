@@ -1,0 +1,61 @@
+{
+  "industry": "ENERGY",
+  "market": "US",
+  "timestamp": "2026-03-21T00:49:22.273297",
+  "results": [
+    {
+      "ticker": "COP",
+      "price": 127.16000366210938,
+      "quick_score": 2,
+      "deep_score": 4.000850532342226,
+      "signal": "SELL",
+      "recommendation": "SELL",
+      "confidence": "HIGH",
+      "buy_score": 0,
+      "sell_score": 2,
+      "rsi": 70.623570368611,
+      "rsi_status": "OVERBOUGHT",
+      "volume_spike": 0.47394863534442405,
+      "reasons": [
+        "RSI71\u2191"
+      ],
+      "reason": "Both quick (2/5) and deep (4.0/10) methods agree"
+    },
+    {
+      "ticker": "MPC",
+      "price": 235.86000061035156,
+      "quick_score": 2,
+      "deep_score": 3.7430414047111844,
+      "signal": "SELL",
+      "recommendation": "SELL",
+      "confidence": "HIGH",
+      "buy_score": 0,
+      "sell_score": 2,
+      "rsi": 74.26385510135313,
+      "rsi_status": "OVERBOUGHT",
+      "volume_spike": 0.38276502449897976,
+      "reasons": [
+        "RSI74\u2191"
+      ],
+      "reason": "Both quick (2/5) and deep (3.7/10) methods agree"
+    },
+    {
+      "ticker": "PSX",
+      "price": 178.0,
+      "quick_score": 2,
+      "deep_score": 4.153868712877325,
+      "signal": "SELL",
+      "recommendation": "SELL",
+      "confidence": "HIGH",
+      "buy_score": 0,
+      "sell_score": 2,
+      "rsi": 78.35778855035457,
+      "rsi_status": "OVERBOUGHT",
+      "volume_spike": 0.371079329930261,
+      "reasons": [
+        "RSI78\u2191"
+      ],
+      "reason": "Both quick (2/5) and deep (4.2/10) methods agree"
+    }
+  ]
+}

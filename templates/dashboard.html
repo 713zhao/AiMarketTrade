@@ -1109,6 +1109,44 @@
                         lastScanHtml += `<div id="${persistentId}" class="collapsible-content show">`;  // Default expanded
                         lastScanHtml += `<div class="collapsible-inner">`;
                         
+                        // Add execution details if available from background scan
+                        const execDetails = allResultsData.execution_details;
+                        if (execDetails && execDetails.length > 0) {
+                            const executedCount = execDetails.filter(d => d.executed).length;
+                            lastScanHtml += `<div style="margin-bottom: 1.5rem; padding: 1rem; background: ${executedCount > 0 ? '#d4edda' : '#e2e3e5'}; border-radius: 8px; border-left: 4px solid ${executedCount > 0 ? '#155724' : '#666'};">`;
+                            lastScanHtml += `<strong style="color: ${executedCount > 0 ? '#155724' : '#666'};">💰 Execution Details - ${executedCount} executed, ${execDetails.length - executedCount} skipped</strong>`;
+                            lastScanHtml += `<table style="width: 100%; border-collapse: collapse; margin-top: 1rem; background: white;">`;
+                            lastScanHtml += `<thead style="background: #495057; color: white;"><tr>
+                                <th style="padding: 0.75rem; text-align: left;">Ticker</th>
+                                <th style="padding: 0.75rem;">Signal</th>
+                                <th style="padding: 0.75rem;">Score</th>
+                                <th style="padding: 0.75rem;">Confidence</th>
+                                <th style="padding: 0.75rem;">Status</th>
+                                <th style="padding: 0.75rem; text-align: left;">Details / Reason</th>
+                            </tr></thead><tbody>`;
+                            
+                            execDetails.forEach((detail, idx) => {
+                                const executed = detail.executed;
+                                const rowBg = idx % 2 === 0 ? '#ffffff' : '#f9f9f9';
+                                const statusBg = executed ? '#d4edda' : '#fff3cd';
+                                const statusText = executed ? '✅ Executed' : '⏳ Skipped';
+                                const statusColor = executed ? '#155724' : '#856404';
+                                const signalBg = detail.recommendation === 'BUY' ? '#cfe2ff' : detail.recommendation === 'SELL' ? '#f8d7da' : '#e2e3e5';
+                                const signalColor = detail.recommendation === 'BUY' ? '#084298' : detail.recommendation === 'SELL' ? '#842029' : '#383d41';
+                                
+                                lastScanHtml += `<tr style="border-bottom: 1px solid #ddd; background: ${rowBg};">`;
+                                lastScanHtml += `<td style="padding: 0.75rem; font-weight: 600;">${detail.ticker}</td>`;
+                                lastScanHtml += `<td style="padding: 0.75rem; text-align: center;"><span style="background: ${signalBg}; color: ${signalColor}; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600;">${detail.recommendation}</span></td>`;
+                                lastScanHtml += `<td style="padding: 0.75rem; text-align: center;">${detail.deep_score?.toFixed(1) || 'N/A'}/10</td>`;
+                                lastScanHtml += `<td style="padding: 0.75rem; text-align: center;">${detail.confidence}</td>`;
+                                lastScanHtml += `<td style="padding: 0.75rem; text-align: center;"><span style="background: ${statusBg}; color: ${statusColor}; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600;">${statusText}</span></td>`;
+                                lastScanHtml += `<td style="padding: 0.75rem; color: #495057; font-size: 0.875rem; word-break: break-word;">${detail.reason || 'No reason provided'}</td>`;
+                                lastScanHtml += `</tr>`;
+                            });
+                            
+                            lastScanHtml += `</tbody></table></div>`;
+                        }
+                        
                         if (!allResults || allResults.length === 0) {
                             lastScanHtml += '<p style="color: #7f8c8d;">No scan data available</p>';
                         } else {
@@ -1281,6 +1319,19 @@
                 Time: ${stages.deep?.time_secs || 0}s<br>
                 Confirmed: ${stages.deep?.confirmed || 0}
             </div>`;
+            
+            // Add execution stage if available
+            if (scanData.execution) {
+                const exec = scanData.execution;
+                const execStatusBg = exec.trades_executed > 0 ? '#d4edda' : '#e2e3e5';
+                const execStatusColor = exec.trades_executed > 0 ? '#155724' : '#666';
+                html += `<div style="background: ${execStatusBg}; padding: 0.75rem; border-radius: 4px; border-left: 4px solid ${execStatusColor};">
+                    <strong style="color: ${execStatusColor};">💰 Automatic Execution</strong><br>
+                    Mode: ${exec.auto_execute_enabled ? '✅ ENABLED' : '⏳ DISABLED (Manual)'}<br>
+                    Trades Executed: ${exec.trades_executed}
+                </div>`;
+            }
+            
             html += `<div>
                 <strong>⏱️ Total Time</strong><br>
                 ${scanData.total_time_secs || 0}s<br>
@@ -1288,6 +1339,52 @@
             </div>`;
             html += `</div>`;
             html += `</div>`;
+            
+            // Add execution details table if available
+            if (scanData.execution && scanData.execution.execution_details && scanData.execution.execution_details.length > 0) {
+                const execId = `execution-details-${industry}-${Date.now()}`;
+                const execDetails = scanData.execution.execution_details;
+                const executedCount = execDetails.filter(d => d.executed).length;
+                
+                html += `<button class="collapsible-btn" onclick="toggleCollapsible('${execId}', this)" style="background: ${executedCount > 0 ? '#d4edda' : '#e2e3e5'}; margin-top: 1rem;">
+                    <span>${executedCount > 0 ? '💰' : '📋'} Execution Details (${executedCount} executed, ${execDetails.length - executedCount} skipped)</span>
+                    <span style="font-size: 1.2rem;">▼</span>
+                </button>`;
+                
+                html += `<div id="${execId}" class="collapsible-content">`;
+                html += `<div class="collapsible-inner">`;
+                html += `<table style="width: 100%; border-collapse: collapse; background: white;">`;
+                html += `<thead style="background: #495057; color: white;"><tr>
+                    <th style="padding: 0.75rem; text-align: left;">Ticker</th>
+                    <th style="padding: 0.75rem;">Signal</th>
+                    <th style="padding: 0.75rem;">Score</th>
+                    <th style="padding: 0.75rem;">Confidence</th>
+                    <th style="padding: 0.75rem;">Status</th>
+                    <th style="padding: 0.75rem; text-align: left;">Details / Reason</th>
+                </tr></thead><tbody>`;
+                
+                execDetails.forEach((detail, idx) => {
+                    const executed = detail.executed;
+                    const rowBg = idx % 2 === 0 ? '#ffffff' : '#f9f9f9';
+                    const statusBg = executed ? '#d4edda' : '#fff3cd';
+                    const statusText = executed ? '✅ Executed' : '⏳ Skipped';
+                    const statusColor = executed ? '#155724' : '#856404';
+                    const signalBg = detail.recommendation === 'BUY' ? '#cfe2ff' : detail.recommendation === 'SELL' ? '#f8d7da' : '#e2e3e5';
+                    const signalColor = detail.recommendation === 'BUY' ? '#084298' : detail.recommendation === 'SELL' ? '#842029' : '#383d41';
+                    
+                    html += `<tr style="border-bottom: 1px solid #ddd; background: ${rowBg};">`;
+                    html += `<td style="padding: 0.75rem; font-weight: 600;">${detail.ticker}</td>`;
+                    html += `<td style="padding: 0.75rem; text-align: center;"><span style="background: ${signalBg}; color: ${signalColor}; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600;">${detail.recommendation}</span></td>`;
+                    html += `<td style="padding: 0.75rem; text-align: center;">${detail.deep_score?.toFixed(1) || 'N/A'}/10</td>`;
+                    html += `<td style="padding: 0.75rem; text-align: center;">${detail.confidence}</td>`;
+                    html += `<td style="padding: 0.75rem; text-align: center;"><span style="background: ${statusBg}; color: ${statusColor}; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600;">${statusText}</span></td>`;
+                    html += `<td style="padding: 0.75rem; color: #495057; font-size: 0.875rem; word-break: break-word;">${detail.reason || 'No reason provided'}</td>`;
+                    html += `</tr>`;
+                });
+                
+                html += `</tbody></table>`;
+                html += `</div></div>`;
+            }
             
             // Collapsible summary table section - ALWAYS SHOW BUTTON
             const collapsibleId = `summary-${industry}-${Date.now()}`;

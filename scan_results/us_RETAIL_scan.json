@@ -1,0 +1,43 @@
+{
+  "industry": "RETAIL",
+  "market": "US",
+  "timestamp": "2026-03-21T00:49:28.011213",
+  "results": [
+    {
+      "ticker": "WMT",
+      "price": 119.54000091552734,
+      "quick_score": 2,
+      "deep_score": 3.607531405089259,
+      "signal": "BUY",
+      "recommendation": "BUY",
+      "confidence": "HIGH",
+      "buy_score": 2,
+      "sell_score": 0,
+      "rsi": 29.941726360119205,
+      "rsi_status": "OVERSOLD",
+      "volume_spike": 0.6065422235259944,
+      "reasons": [
+        "RSI30\u2193"
+      ],
+      "reason": "Both quick (2/5) and deep (3.6/10) methods agree"
+    },
+    {
+      "ticker": "HD",
+      "price": 323.07000732421875,
+      "quick_score": 2,
+      "deep_score": 4.052440413432264,
+      "signal": "BUY",
+      "recommendation": "BUY",
+      "confidence": "HIGH",
+      "buy_score": 2,
+      "sell_score": 0,
+      "rsi": 14.66046728771613,
+      "rsi_status": "OVERSOLD",
+      "volume_spike": 0.6426987297565475,
+      "reasons": [
+        "RSI15\u2193"
+      ],
+      "reason": "Both quick (2/5) and deep (4.1/10) methods agree"
+    }
+  ]
+}

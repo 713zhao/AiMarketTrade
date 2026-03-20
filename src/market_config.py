@@ -5,7 +5,7 @@ Defines supported markets and their associated tickers.
 
 from enum import Enum
 from typing import Dict, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 class Market(str, Enum):
     """Supported trading markets."""
@@ -38,7 +38,7 @@ MARKET_INDUSTRY_TICKERS: Dict[Market, Dict[str, List[str]]] = {
         "AI": ["9988.HK", "3690.HK", "2018.HK", "9618.HK"],  # Alibaba, JD.com, Xiaomi, Bitauto
         "TECH": ["9988.HK", "3690.HK", "2018.HK", "1810.HK"],  # Tech related
         "FINANCE": ["2333.HK", "1398.HK", "6823.HK", "2601.HK"],  # Banking
-        "RETAIL": ["3333.HK", "1888.HK", "2313.HK"],  # Retail
+        "RETAIL": ["1888.HK", "2313.HK"],  # Retail
         "ENERGY": ["0883.HK", "2883.HK", "3337.HK"],  # Energy
         "HEALTHCARE": ["1177.HK", "1211.HK"],  # Healthcare
         "TELECOM": ["0941.HK", "2888.HK"],  # Telecom
@@ -89,7 +89,7 @@ def is_market_open(market: Market) -> bool:
         return False
     
     open_hour, close_hour = MARKET_HOURS[market]
-    current_utc_hour = datetime.utcnow().hour
+    current_utc_hour = datetime.now(timezone.utc).hour
     
     # Handle markets that span midnight (e.g., CHINA: 0-9)
     if open_hour < close_hour:
