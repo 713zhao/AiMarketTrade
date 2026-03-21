@@ -888,6 +888,7 @@ def get_all_results(industry):
     """Get ALL scan results for an industry from primary market scanner."""
     try:
         results = []
+        all_results = []  # Quick scan results (ALL tickers)
         execution_details = None
         last_updated = None
         
@@ -895,6 +896,7 @@ def get_all_results(industry):
         if current_market in active_scanners:
             scanner = active_scanners[current_market]
             results = scanner.get_all_results(industry)
+            all_results = scanner.quick_scan_results.get(industry, [])  # Get quick scan results
             last_updated = scanner.last_scan_time.get(industry)
             # Get execution details if available
             execution_details = scanner.execution_details.get(industry)
@@ -911,7 +913,8 @@ def get_all_results(industry):
             if file_path.exists():
                 with open(file_path, 'r') as f:
                     data = json.load(f)
-                    results = data.get("results", [])
+                    results = data.get("results", [])  # Deep analysis results
+                    all_results = data.get("all_results", [])  # Quick scan results
                     execution_details = data.get("execution_details")
         
         # Log what we're returning for debugging
@@ -922,8 +925,10 @@ def get_all_results(industry):
         
         response = {
             "industry": industry,
-            "results": results,
+            "results": results,  # Deep analysis only (passed both stages)
+            "all_results": all_results,  # Quick scan results (ALL tickers)
             "count": len(results),
+            "all_count": len(all_results),
             "market": current_market.value,
             "last_updated": last_updated
         }
@@ -1114,10 +1119,10 @@ def force_scan(industry):
             validated_results = []
             deep_time = 0
         
-        # Store results in background scanner (with execution details)
+        # Store results in background scanner (with execution details and quick_results)
         # Note: execution_details will be calculated in Stage 3 below
-        # For now, just store the validated results
-        background_scanner.set_results(industry, validated_results, None)
+        # For now, just store the validated results with quick results
+        background_scanner.set_results(industry, validated_results, None, quick_results)
         total_time = quick_time + deep_time
         
         # STAGE 3: Optional automatic trade execution
@@ -1130,8 +1135,8 @@ def force_scan(industry):
             validated_results, industry, config, trading_state
         )
         
-        # NOW store results again with execution details
-        background_scanner.set_results(industry, validated_results, execution_details)
+        # NOW store results again with execution details and quick_results
+        background_scanner.set_results(industry, validated_results, execution_details, quick_results)
         
         # Log execution results
         for detail in execution_details:
@@ -1178,7 +1183,8 @@ def force_scan(industry):
             },
             "total_time_secs": round(total_time, 2),
             "message": f"✅ Scan complete: {len(quick_results)} candidates → {len(validated_results)} confirmed → {len(executed_trades)} auto-executed",
-            "results": validated_results,  # Main results for dashboard
+            "results": validated_results,  # Main results for dashboard (deep analysis only)
+            "all_results": quick_results,  # All quick scan results (for dashboard summary table)
             "summary_table": all_stocks_sorted  # Summary table for HTML display
         })
     except Exception as e:

@@ -1046,10 +1046,12 @@
                             throw new Error(`Failed to fetch all results: ${allResultsResponse.status}`);
                         }
                         const allResultsData = await allResultsResponse.json();
-                        const allResults = allResultsData.results || [];
+                        // Use all_results (quick scan - ALL tickers) for the persistent "Last Scan Results" section
+                        // NOT just deep analysis results
+                        const allResults = allResultsData.all_results || [];
                         
                         // Log for debugging
-                        console.log(`[${industry}] Total results: ${allResults.length}`);
+                        console.log(`[${industry}] Total quick scan results: ${allResults.length}`);
                         const buyCount_ = allResults.filter(r => r.recommendation === 'BUY').length;
                         const sellCount_ = allResults.filter(r => r.recommendation === 'SELL').length;
                         const holdCount_ = allResults.filter(r => r.recommendation === 'HOLD').length;

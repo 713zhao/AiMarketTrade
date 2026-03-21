@@ -22,7 +22,8 @@ class BackgroundScanner:
         self.is_running = False
         self.thread = None
         self.lock = Lock()
-        self.scan_results = {}  # {industry: [results]}
+        self.scan_results = {}  # {industry: [deep analysis results]}
+        self.quick_scan_results = {}  # {industry: [quick scan results - ALL tickers]}
         self.execution_details = {}  # {industry: [execution_details]}
         self.last_scan_time = {}  # {industry: timestamp}
         self.scan_interval = 300  # 5 minutes in seconds
@@ -101,7 +102,7 @@ class BackgroundScanner:
                 logger.error(f"Error in scan loop: {e}")
                 time.sleep(10)  # Wait before retrying
     
-    def _save_results_to_file(self, industry: str, results: List[Dict], execution_details: Optional[List[Dict]] = None):
+    def _save_results_to_file(self, industry: str, results: List[Dict], execution_details: Optional[List[Dict]] = None, quick_results: Optional[List[Dict]] = None):
         """Save scan results to JSON file with market-specific naming"""
         try:
             # Include market name in filename to avoid conflicts when multiple markets scan
@@ -112,8 +113,12 @@ class BackgroundScanner:
                 "industry": industry,
                 "market": self.market.value,
                 "timestamp": datetime.now().isoformat(),
-                "results": results
+                "results": results  # Deep analysis results
             }
+            
+            # Include all quick scan results (for showing all tickers)
+            if quick_results is not None:
+                data["all_results"] = quick_results
             
             # Include execution details if provided (even if empty list)
             if execution_details is not None:
@@ -409,11 +414,12 @@ class BackgroundScanner:
             # NOW store results with execution_details
             with self.lock:
                 self.scan_results[industry] = results
+                self.quick_scan_results[industry] = quick_results  # Store quick scan results too
                 self.execution_details[industry] = execution_details
                 self.last_scan_time[industry] = datetime.now().isoformat()
             
             # Save to file for persistence (with execution details if available)
-            self._save_results_to_file(industry, results, execution_details)
+            self._save_results_to_file(industry, results, execution_details, quick_results)
             
             # Format and print markdown table
             table = self._format_as_markdown_table(industry, results)
@@ -476,19 +482,20 @@ class BackgroundScanner:
         
         return results
     
-    def set_results(self, industry: str, results: List[Dict], execution_details: Optional[List[Dict]] = None):
+    def set_results(self, industry: str, results: List[Dict], execution_details: Optional[List[Dict]] = None, quick_results: Optional[List[Dict]] = None):
         """Manually set scan results for an industry (used by web API for immediate results)"""
         with self.lock:
             self.scan_results[industry] = results
+            self.quick_scan_results[industry] = quick_results or []  # Store quick results if provided
             self.execution_details[industry] = execution_details
             self.last_scan_time[industry] = datetime.now().isoformat()
         
         # Save to file
-        self._save_results_to_file(industry, results, execution_details)
+        self._save_results_to_file(industry, results, execution_details, quick_results)
         # Print formatted table
         table = self._format_as_markdown_table(industry, results)
         logger.info("\n" + table)
-        logger.info(f"Results updated for {industry}: {len(results)} confirmed picks")
+        logger.info(f"Results updated for {industry}: {len(results)} confirmed picks, {len(quick_results or [])} total scanned")
     
     def get_scan_table(self, industry: Optional[str] = None) -> str:
         """Get formatted markdown table of scan results"""
