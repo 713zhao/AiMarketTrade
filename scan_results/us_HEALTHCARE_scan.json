@@ -1,0 +1,91 @@
+{
+  "industry": "HEALTHCARE",
+  "market": "US",
+  "timestamp": "2026-03-20T21:30:15.805744",
+  "results": [
+    {
+      "ticker": "JNJ",
+      "timestamp": "2026-03-20T21:30:06.655344",
+      "company_name": "Johnson & Johnson",
+      "price": 237.60000610351562,
+      "volume": 4866957,
+      "market_cap": 572592029696,
+      "pe_ratio": 21.560799,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "PFE",
+      "timestamp": "2026-03-20T21:30:08.366540",
+      "company_name": "Pfizer Inc.",
+      "price": 27.40999984741211,
+      "volume": 40673127,
+      "market_cap": 155917844480,
+      "pe_ratio": 20.154411,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "UNH",
+      "timestamp": "2026-03-20T21:30:10.084059",
+      "company_name": "UnitedHealth Group Incorporated",
+      "price": 280.44000244140625,
+      "volume": 5510164,
+      "market_cap": 254548606976,
+      "pe_ratio": 21.181269,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "LLY",
+      "timestamp": "2026-03-20T21:30:11.546312",
+      "company_name": "Eli Lilly and Company",
+      "price": 912.9000244140625,
+      "volume": 536042,
+      "market_cap": 818807898112,
+      "pe_ratio": 39.88012,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "AZN",
+      "timestamp": "2026-03-20T21:30:13.109473",
+      "company_name": "AstraZeneca PLC",
+      "price": 188.24000549316406,
+      "volume": 56993,
+      "market_cap": 291825385472,
+      "pe_ratio": 28.782875,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "ABBV",
+      "timestamp": "2026-03-20T21:30:15.125958",
+      "company_name": "AbbVie Inc.",
+      "price": 206.22999572753906,
+      "volume": 3581,
+      "market_cap": 364649480192,
+      "pe_ratio": 87.016884,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    }
+  ]
+}

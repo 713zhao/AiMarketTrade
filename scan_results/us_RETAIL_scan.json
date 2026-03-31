@@ -1,0 +1,77 @@
+{
+  "industry": "RETAIL",
+  "market": "US",
+  "timestamp": "2026-03-20T21:30:34.427932",
+  "results": [
+    {
+      "ticker": "AMZN",
+      "timestamp": "2026-03-20T21:30:29.254451",
+      "company_name": "Amazon.com, Inc.",
+      "price": 206.99000549316406,
+      "volume": 6684266,
+      "market_cap": 2221806452736,
+      "pe_ratio": 28.906425,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "WMT",
+      "timestamp": "2026-03-20T21:30:30.226757",
+      "company_name": "Walmart Inc.",
+      "price": 120.87999725341797,
+      "volume": 4472571,
+      "market_cap": 963703996416,
+      "pe_ratio": 44.441174,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "TGT",
+      "timestamp": "2026-03-20T21:30:31.414558",
+      "company_name": "Target Corporation",
+      "price": 114.23500061035156,
+      "volume": 759758,
+      "market_cap": 51731959808,
+      "pe_ratio": 14.051045,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "COST",
+      "timestamp": "2026-03-20T21:30:32.683899",
+      "company_name": "Costco Wholesale Corporation",
+      "price": 974.8800048828125,
+      "volume": 407868,
+      "market_cap": 432719396864,
+      "pe_ratio": 50.774998,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "HD",
+      "timestamp": "2026-03-20T21:30:33.758487",
+      "company_name": "The Home Depot, Inc.",
+      "price": 329.5299987792969,
+      "volume": 1151163,
+      "market_cap": 328050900992,
+      "pe_ratio": 23.141151,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    }
+  ]
+}

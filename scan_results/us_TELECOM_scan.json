@@ -1,0 +1,63 @@
+{
+  "industry": "TELECOM",
+  "market": "US",
+  "timestamp": "2026-03-20T21:30:38.610004",
+  "results": [
+    {
+      "ticker": "VZ",
+      "timestamp": "2026-03-20T21:30:34.939511",
+      "company_name": "Verizon Communications Inc.",
+      "price": 49.630001068115234,
+      "volume": 3473139,
+      "market_cap": 209323671552,
+      "pe_ratio": 12.224138,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "T",
+      "timestamp": "2026-03-20T21:30:36.020447",
+      "company_name": "AT&T Inc.",
+      "price": 28.030000686645508,
+      "volume": 6059834,
+      "market_cap": 198717276160,
+      "pe_ratio": 9.220395,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "TMUS",
+      "timestamp": "2026-03-20T21:30:37.187812",
+      "company_name": "T-Mobile US, Inc.",
+      "price": 206.77000427246094,
+      "volume": 719092,
+      "market_cap": 231273611264,
+      "pe_ratio": 21.294542,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "S",
+      "timestamp": "2026-03-20T21:30:38.187087",
+      "company_name": "SentinelOne, Inc.",
+      "price": 14.199999809265137,
+      "volume": 100879,
+      "market_cap": 4826139648,
+      "pe_ratio": null,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    }
+  ]
+}

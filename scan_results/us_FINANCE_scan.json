@@ -1,0 +1,91 @@
+{
+  "industry": "FINANCE",
+  "market": "US",
+  "timestamp": "2026-03-20T21:30:22.984262",
+  "results": [
+    {
+      "ticker": "JPM",
+      "timestamp": "2026-03-20T21:30:16.387613",
+      "company_name": "JPMorgan Chase & Co.",
+      "price": 288.385009765625,
+      "volume": 2057983,
+      "market_cap": 777783738368,
+      "pe_ratio": 14.412045,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "BAC",
+      "timestamp": "2026-03-20T21:30:17.555565",
+      "company_name": "Bank of America Corporation",
+      "price": 47.21500015258789,
+      "volume": 4884522,
+      "market_cap": 344787353600,
+      "pe_ratio": 12.392388,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "WFC",
+      "timestamp": "2026-03-20T21:30:18.872211",
+      "company_name": "Wells Fargo & Company",
+      "price": 76.4000015258789,
+      "volume": 20378,
+      "market_cap": 240328310784,
+      "pe_ratio": 12.230031,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "GS",
+      "timestamp": "2026-03-20T21:30:20.116755",
+      "company_name": "The Goldman Sachs Group, Inc.",
+      "price": 807.239990234375,
+      "volume": 677604,
+      "market_cap": 242114281472,
+      "pe_ratio": 15.72954,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "MS",
+      "timestamp": "2026-03-20T21:30:21.247226",
+      "company_name": "Morgan Stanley",
+      "price": 158.5500030517578,
+      "volume": 4929,
+      "market_cap": 251755249664,
+      "pe_ratio": 15.528893,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "BLK",
+      "timestamp": "2026-03-20T21:30:22.392261",
+      "company_name": "BlackRock, Inc.",
+      "price": 970.0,
+      "volume": 108030,
+      "market_cap": 150875291648,
+      "pe_ratio": 27.48654,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    }
+  ]
+}

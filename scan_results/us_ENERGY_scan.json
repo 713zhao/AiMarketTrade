@@ -1,0 +1,77 @@
+{
+  "industry": "ENERGY",
+  "market": "US",
+  "timestamp": "2026-03-20T21:30:28.801465",
+  "results": [
+    {
+      "ticker": "XOM",
+      "timestamp": "2026-03-20T21:30:23.522021",
+      "company_name": "Exxon Mobil Corporation",
+      "price": 159.375,
+      "volume": 93440,
+      "market_cap": 664077926400,
+      "pe_ratio": 23.751863,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "CVX",
+      "timestamp": "2026-03-20T21:30:24.850015",
+      "company_name": "Chevron Corporation",
+      "price": 201.52000427246094,
+      "volume": 120385,
+      "market_cap": 402909757440,
+      "pe_ratio": 30.395174,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "COP",
+      "timestamp": "2026-03-20T21:30:26.057652",
+      "company_name": "ConocoPhillips",
+      "price": 126.48500061035156,
+      "volume": 1565173,
+      "market_cap": 154760364032,
+      "pe_ratio": 19.938583,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "MPC",
+      "timestamp": "2026-03-20T21:30:27.200755",
+      "company_name": "Marathon Petroleum Corporation",
+      "price": 238.1300048828125,
+      "volume": 394254,
+      "market_cap": 71582466048,
+      "pe_ratio": 17.999245,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    },
+    {
+      "ticker": "PSX",
+      "timestamp": "2026-03-20T21:30:28.280584",
+      "company_name": "Phillips 66",
+      "price": 178.32000732421875,
+      "volume": 555614,
+      "market_cap": 71460675584,
+      "pe_ratio": 16.526415,
+      "buy_score": 0,
+      "sell_score": 0,
+      "recommendation": "HOLD",
+      "reason": "No signals",
+      "reasons": []
+    }
+  ]
+}
